@@ -68,7 +68,6 @@ Product discovery defaults and initial artist/genre shelves are informed by thir
   - `android.permission.INTERNET` (YouTube embeds & official metadata)
   - `android.permission.READ_MEDIA_AUDIO` (Android 13+ user-selected/device audio library)
   - `android.permission.READ_EXTERNAL_STORAGE` (`maxSdkVersion="32"` for older devices)
-  - `android.permission.FOREGROUND_SERVICE` & `android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK` (local audio playback continuity only)
 
 ---
 

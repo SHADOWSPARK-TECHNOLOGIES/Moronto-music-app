@@ -22,10 +22,10 @@
 | Gate | Command / Tool | Result | Evidence |
 | :--- | :--- | :--- | :--- |
 | **Unit & Integration Tests (`AC-1`..`AC-7`)** | `./gradlew testDebugUnitTest` | `PASS (0 failures)` | `MornicaAcceptanceTest` (7 acceptance test suites verified) |
-| **Android API 36 Debug APK Build** | `./gradlew assembleDebug` | `PASS` | `app/build/outputs/apk/debug/app-debug.apk` (`sha256: b2710ee4bd695f5586a5633127b01faa92ff1356e61fb8ae21a530e46a0ccabc`) |
+| **Android API 36 Debug APK Build** | `./gradlew assembleDebug` | `PASS` | `app/build/outputs/apk/debug/app-debug.apk` (`sha256: f95bc7cbf615fff74b570c0e47ad0727fb0a68040af3058628b64012e6481538`) |
 | **Android Lint Check** | `./gradlew lintDebug` | `PASS` | `app/build/reports/lint-results-debug.html` |
 | **SDK & Manifest Badging** | `aapt2 dump badging app-debug.apk` | `PASS` | `compileSdkVersion='36'`, `targetSdkVersion='36'`, `minSdkVersion='26'` |
 | **REA Artifact Inspection** | `mcp_rea_open_binary` + `mcp_rea_inspect_artifact` | `PASS` | `ev_3cac419e8077cb64ff43043f15338fac6af5b8d1803eedb83bc24a9728dfd7f5` (`124` entries, `0` integrity contradictions) |
 | **Connected Device / Emulator Run** | `adb devices` | `BLOCKED` | No physical Android device or running emulator attached to host during CLI run |
 
-| **Release AAB Bundle (`bundleRelease`)** | `./gradlew --no-daemon bundleRelease` | `PASS (Unsigned AAB)` | `app/build/outputs/bundle/release/app-release.aab` (`sha256: cb19f6d14895b51873be71c654d55d0848e33d50967594f09a910439604c8665`) |
+| **Release AAB Bundle (`bundleRelease`)** | `./gradlew --no-daemon bundleRelease` | `PASS (Unsigned AAB)` | `app/build/outputs/bundle/release/app-release.aab` (`sha256: 3c0e6e1cc699672bf03eafe3da0ae88952adfd1a4aec8f298951bfced9453174`) |
