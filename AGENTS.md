@@ -12,7 +12,7 @@ Build MORONTO MORNICA, an artist-first African music discovery and promotional w
 7. Engineer must run package-manager-appropriate lint, tests, typecheck and build, using actual scripts. Add missing scripts only when justified. Reviewer must independently verify key acceptance criteria.
 8. After two failures on the same cause stop, preserve exact errors, provide proposed fix and wait. No self-asserted success; no unlimited retries.
 9. Use isolated agents: architect investigates and plans, builder implements scoped files, QA independently validates, growth reviews truthful commercial UX. Max two concurrent writers.
-10. Preserve evidence in \`docs/EXECUTION_LOG.md\` and a decision log in \`docs/decisions.md\` once the app is being implemented. No invented source facts.
+10. Preserve evidence in `docs/EXECUTION_LOG.md` and a decision log in `docs/decisions.md` once the app is being implemented. No invented source facts.
 11. Use deliberate, bounded iterations with acceptance criteria, stop on budget/permission/uncertainty blockers. Keep autonomy for reversible local code/test work only.
 12. Do not rewrite a working stack without benchmarked justification. Prefer Next.js + TypeScript, Google platform-compatible deployment, with storage/auth/db selected only after requirements and pricing review.
 
