@@ -1456,6 +1456,7 @@ private fun CreatorHubScreen(
   uiState: MornicaUiState,
   router: PlaybackRouter,
 ) {
+  val context = LocalContext.current
   var artistName by remember { mutableStateOf("") }
   var trackTitle by remember { mutableStateOf("") }
   var genre by remember { mutableStateOf("Afrobeats") }
@@ -1635,6 +1636,25 @@ private fun CreatorHubScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MornicaTextMuted,
           )
+          Spacer(modifier = Modifier.height(10.dp))
+          OutlinedButton(
+            onClick = {
+              val intent =
+                Intent(
+                  Intent.ACTION_VIEW,
+                  Uri.parse(com.shadowspark.morontomornica.model.PUBLIC_PRIVACY_POLICY_URL),
+                )
+              context.startActivity(intent)
+            },
+            shape = RoundedCornerShape(10.dp),
+            border = BorderStroke(1.dp, MornicaSlateBorder),
+          ) {
+            Text(
+              text = "Open Public Privacy Policy",
+              color = MornicaCyan,
+              fontWeight = FontWeight.SemiBold,
+            )
+          }
         }
       }
     }

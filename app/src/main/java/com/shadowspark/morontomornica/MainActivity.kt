@@ -27,12 +27,15 @@ class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
-    // Ensure background-capable MediaSessionService is started and bound to PlaybackRouter
-    try {
-      startService(Intent(this, LocalAudioPlaybackService::class.java))
-    } catch (_: Exception) {
-      // Defensive catch for restricted test environments
+    val appContext = applicationContext
+    MornicaRuntime.serviceStarter = {
+      try {
+        appContext.startService(Intent(appContext, LocalAudioPlaybackService::class.java))
+      } catch (_: Exception) {
+        // Defensive catch for restricted test environments
+      }
     }
+    ensurePlaybackServiceStarted()
 
     val initialGranted = hasAudioReadPermission()
     if (initialGranted) {
@@ -45,6 +48,19 @@ class MainActivity : ComponentActivity() {
         localRepo = localRepo,
         onRequestAudioPermission = ::requestAudioReadPermission,
       )
+    }
+  }
+
+  override fun onStart() {
+    super.onStart()
+    ensurePlaybackServiceStarted()
+  }
+
+  private fun ensurePlaybackServiceStarted() {
+    try {
+      startService(Intent(this, LocalAudioPlaybackService::class.java))
+    } catch (_: Exception) {
+      // Defensive catch for restricted test environments
     }
   }
 

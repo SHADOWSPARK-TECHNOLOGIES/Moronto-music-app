@@ -815,12 +815,18 @@ class Media3LocalAudioController(
 }
 
 object MornicaRuntime {
+  @Volatile var serviceStarter: (() -> Unit)? = null
   val localRepo: LocalMediaRepository = LocalMediaRepository()
   val youtubeRepo: YouTubeDiscoveryRepository = YouTubeDiscoveryRepository()
   val router: PlaybackRouter =
     PlaybackRouter(
       youtubeRepository = youtubeRepo,
       localMediaRepository = localRepo,
+      onLocalAudioCommand = { _, play ->
+        if (play) {
+          serviceStarter?.invoke()
+        }
+      },
     )
 }
 
@@ -878,10 +884,12 @@ class LocalAudioPlaybackService : MediaSessionService() {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
       )
 
-    mediaSession =
+    val session =
       MediaSession.Builder(this, player)
         .setSessionActivity(sessionActivityPendingIntent)
         .build()
+    mediaSession = session
+    addSession(session)
 
     val bridge = Media3LocalAudioController(player)
     controllerBridge = bridge
