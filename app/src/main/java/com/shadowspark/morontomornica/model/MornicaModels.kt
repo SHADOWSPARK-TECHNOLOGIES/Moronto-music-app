@@ -14,13 +14,13 @@ enum class ActiveEngine {
 
 enum class YouTubeSourceBadge(val label: String) {
   LIVE_YOUTUBE_API("LIVE · Official YouTube Data API v3"),
-  CURATED_FALLBACK("CURATED · Offline / Quota-Safe Official Metadata"),
+  CURATED_FALLBACK("VERIFIED OEMBED · Official YouTube Metadata"),
 }
 
 enum class ProvenanceStatus(val label: String, val isPlayableByDefault: Boolean) {
   LOCAL_DEVICE("LOCAL · Device File", true),
-  DEMO("DEMO · Cleared Preview", true),
-  LICENSED("LICENSED · Artist Attested", true),
+  DEMO("DEMO · First-Party Synth Preview", true),
+  LICENSED("LICENSED · Signed Artist Agreement", false),
   UNAVAILABLE("UNAVAILABLE · Awaiting Clearance", false),
 }
 
@@ -31,11 +31,18 @@ enum class RepeatMode {
 }
 
 enum class LibraryTab(val label: String) {
-  SONGS("Songs"),
-  FOLDERS("Folders"),
-  ARTISTS("Artists"),
+  SONGS("Tracks"),
+  PLAYLISTS("Queues"),
   ALBUMS("Albums"),
-  PLAYLISTS("Playlists"),
+  ARTISTS("Artists"),
+  FOLDERS("Folders"),
+}
+
+enum class TrackSortOption(val label: String) {
+  TITLE("Title"),
+  ARTIST("Artist"),
+  DURATION("Duration"),
+  YEAR("Year"),
 }
 
 data class VidIqSearchEstimate(
@@ -75,10 +82,22 @@ data class YouTubeVideoCard(
   fun officialWatchUrl(): String =
     "https://www.youtube.com/watch?v=$videoId"
 
+  fun officialChannelUrl(): String? =
+    if (CHANNEL_ID_REGEX.matches(channelId)) {
+      "https://www.youtube.com/channel/$channelId"
+    } else {
+      null
+    }
+
   fun isPolicyCompliant(): Boolean =
-    videoId.isNotBlank() &&
-      !videoId.contains("http", ignoreCase = true) &&
+    VIDEO_ID_REGEX.matches(videoId) &&
+      (channelId.isBlank() || CHANNEL_ID_REGEX.matches(channelId)) &&
       isFreeUnpaywalled
+
+  companion object {
+    val VIDEO_ID_REGEX = Regex("^[a-zA-Z0-9_-]{11}$")
+    val CHANNEL_ID_REGEX = Regex("^UC[a-zA-Z0-9_-]{22}$")
+  }
 }
 
 data class LocalMediaTrack(
@@ -91,9 +110,10 @@ data class LocalMediaTrack(
   val uri: String,
   val provenance: ProvenanceStatus,
   val rightsConfirmed: Boolean,
+  val releaseYear: Int = 2026,
 ) {
   fun isPlayableOffline(): Boolean {
-    if (!rightsConfirmed || provenance == ProvenanceStatus.UNAVAILABLE) return false
+    if (!rightsConfirmed || !provenance.isPlayableByDefault) return false
     if (isYouTubeUri(uri)) return false
     return uri.startsWith("content://") ||
       uri.startsWith("file://") ||

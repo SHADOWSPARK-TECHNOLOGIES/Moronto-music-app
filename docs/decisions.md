@@ -37,3 +37,38 @@ The October 19 launch contract targets Google Play Store submission readiness re
 ### Decision
 - Build the primary Android client in Kotlin 2.2.10 + Jetpack Compose (Material 3) with `compileSdk { version = release(36) { minorApiLevel = 1 } }`, `targetSdk = 36`, `minSdk = 26`.
 - Use scoped storage permissions (`READ_MEDIA_AUDIO` on API 33+, `READ_EXTERNAL_STORAGE` `maxSdkVersion=32`) and standard Android `MediaStore.Audio.Media` queries so no broad `MANAGE_EXTERNAL_STORAGE` permission is ever requested.
+
+---
+
+## ADR-003: Media3 `LocalAudioPlaybackService` & `LocalPlaybackController` Contract (2026-10-20)
+
+### Status
+Accepted (`VERIFIED`)
+
+### Context
+1. Previously, `MainActivity` owned an Android `MediaPlayer` directly and released it in `onDestroy()`, terminating playback on background/configuration change.
+2. `PlaybackRouter.seekLocalTo` only updated UI state without seeking the actual audio engine, and Shuffle, Repeat (`OFF`, `ALL`, `ONE`), Skip Next/Previous, and end-of-track transitions were not wired to a real playback controller.
+3. Unverified YouTube video/channel IDs and unsupported `VERIFIED`/`LICENSED` claims existed in default seed repositories.
+
+### Decision
+- Introduce `LocalAudioController` and `Media3LocalAudioController` (`domain/PlaybackRouter.kt`) decoupled from UI components for deterministic unit testing (`ac8`..`ac10`).
+- Implement `LocalAudioPlaybackService` (`domain/PlaybackRouter.kt`) extending AndroidX Media3 `MediaSessionService` backed by `ExoPlayer` with `AudioAttributes` (`USAGE_MEDIA`, `AUDIO_CONTENT_TYPE_MUSIC`, `handleAudioFocus = true`) and `setHandleAudioBecomingNoisy(true)` for automatic pause on headset unplug.
+- Connect `LocalAudioPlaybackService` directly to `MornicaRuntime.router.attachAudioController(bridge)`, reporting live `currentPosition` and `duration` into `PlaybackRouter.onPlaybackPositionUpdated()`.
+- Declare `FOREGROUND_SERVICE` and `FOREGROUND_SERVICE_MEDIA_PLAYBACK` with `android:foregroundServiceType="mediaPlayback"` strictly for local/device audio, keeping YouTube playback visible-only (`ac5`, `ac8`).
+- Replace unverified YouTube seed video/channel IDs with 7 verified official oEmbed video/channel IDs plus an honest empty state + official external YouTube search URL for rising/unmatched queries (`ac11`), and reclassify bundled synthesized WAV previews (`res/raw/mornica_afrobeats_demo.wav`) strictly as `ProvenanceStatus.DEMO`.
+
+---
+
+## ADR-004: ECC Design Recovery (`com.aistudio.morontomusic.xkpqr` Visual System + Native Compose Tokens) (2026-10-20)
+
+### Status
+Accepted (`VERIFIED`)
+
+### Context
+Visual comparison between the original Google AI Studio build (`com.aistudio.morontomusic.xkpqr`, screenshots `old-home.png` and `old-player.png`) and the initial Antigravity build (`new-home.png` and `new-player.png`) showed that the original app had significantly stronger visual hierarchy, surface contrast, navigation ergonomics, and player affordances.
+
+### Decision
+- Recover the original Midnight Slate (`#0B101B`), Slate Header (`#0E1525`), Slate Card (`#131D31` with `1.dp` `#24344D` hairline border), Emerald Mint (`#10B981`), Electric Cyan (`#06B6D4`), and Warm Amber-Orange Gradient (`#F59E0B` → `#EA580C`) palette in `MornicaTheme.kt`.
+- Codify `MornicaTokens` (`CardOuterRadius = 16.dp`, `CardInnerPadding = 12.dp`, `CardInnerEmblemRadius = 10.dp`, `MinTouchTarget = 44.dp`, `withTabularNums()` OpenType `tnum` feature) and optical `PlayArrow` alignment (`+1.dp` horizontal offset) per ECC `design-system` and `make-interfaces-feel-better` skills.
+- Restore the `MorontoTopHeader` (with `.statusBarsPadding()`), 5-tab Musicolet-inspired library sub-navigation (`Tracks`, `Queues`, `Albums`, `Artists`, `Folders`), live search + cyan rescan button, track counter + `Title / Artist / Duration / Year` sort pills, persistent `OfflineMiniPlayerBar`, and expandable full-screen `NowPlayingFullSheet` (`ac12`).
+

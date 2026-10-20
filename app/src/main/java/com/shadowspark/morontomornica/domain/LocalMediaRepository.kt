@@ -16,7 +16,7 @@ class LocalMediaRepository(
     return listOf(
       LocalMediaTrack(
         id = "demo-lagos-pulse",
-        title = "Eko Neon Pulse (Studio Demo)",
+        title = "Eko Neon Pulse (First-Party Synth Demo)",
         artist = "Teniola Blaze",
         album = "Mornica Creator Sessions",
         folderName = "Mornica Demos",
@@ -24,28 +24,31 @@ class LocalMediaRepository(
         uri = rawDemoUri,
         provenance = ProvenanceStatus.DEMO,
         rightsConfirmed = true,
+        releaseYear = 2026,
       ),
       LocalMediaTrack(
         id = "demo-lekki-logdrum",
-        title = "Lekki Sunrise Log-Drum",
+        title = "Lekki Sunrise Log-Drum (First-Party Synth Demo)",
         artist = "Kofi & The LogDrums",
         album = "Amapiano Pilot Tapes",
         folderName = "Mornica Demos",
-        durationMs = 30_000L,
-        uri = rawDemoUri,
-        provenance = ProvenanceStatus.LICENSED,
-        rightsConfirmed = true,
-      ),
-      LocalMediaTrack(
-        id = "demo-yaba-nights",
-        title = "Yaba Midnight Strings",
-        artist = "Zainab Soul",
-        album = "Afro-Soul Showcase",
-        folderName = "Afro-Soul Previews",
-        durationMs = 30_000L,
+        durationMs = 45_000L,
         uri = rawDemoUri,
         provenance = ProvenanceStatus.DEMO,
         rightsConfirmed = true,
+        releaseYear = 2025,
+      ),
+      LocalMediaTrack(
+        id = "demo-yaba-nights",
+        title = "Yaba Midnight Strings (First-Party Synth Demo)",
+        artist = "Zainab Soul",
+        album = "Afro-Soul Showcase",
+        folderName = "Afro-Soul Previews",
+        durationMs = 60_000L,
+        uri = rawDemoUri,
+        provenance = ProvenanceStatus.DEMO,
+        rightsConfirmed = true,
+        releaseYear = 2024,
       ),
       LocalMediaTrack(
         id = "unverified-archive-01",
@@ -57,6 +60,7 @@ class LocalMediaRepository(
         uri = rawDemoUri,
         provenance = ProvenanceStatus.UNAVAILABLE,
         rightsConfirmed = false,
+        releaseYear = 2023,
       ),
     )
   }
@@ -71,6 +75,7 @@ class LocalMediaRepository(
         MediaStore.Audio.Media.ALBUM,
         MediaStore.Audio.Media.DURATION,
         MediaStore.Audio.Media.DATA,
+        MediaStore.Audio.Media.YEAR,
       )
     val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
     val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
@@ -89,6 +94,7 @@ class LocalMediaRepository(
         val albumCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
         val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
         val dataCol = cursor.getColumnIndex(MediaStore.Audio.Media.DATA)
+        val yearCol = cursor.getColumnIndex(MediaStore.Audio.Media.YEAR)
 
         while (cursor.moveToNext()) {
           val id = cursor.getLong(idCol)
@@ -97,6 +103,8 @@ class LocalMediaRepository(
           val album = cursor.getString(albumCol)?.takeIf { it.isNotBlank() } ?: "Local Audio"
           val duration = cursor.getLong(durationCol).coerceAtLeast(1_000L)
           val rawPath = if (dataCol >= 0) cursor.getString(dataCol) else null
+          val rawYear = if (yearCol >= 0) cursor.getInt(yearCol) else 0
+          val resolvedYear = if (rawYear in 1900..2100) rawYear else 2026
           val folder =
             rawPath?.let { File(it).parentFile?.name }?.takeIf { it.isNotBlank() }
               ?: "Device Music"
@@ -114,6 +122,7 @@ class LocalMediaRepository(
               uri = contentUri,
               provenance = ProvenanceStatus.LOCAL_DEVICE,
               rightsConfirmed = true,
+              releaseYear = resolvedYear,
             ),
           )
         }
@@ -140,34 +149,39 @@ class LocalMediaRepository(
     listOf(
       CreatorProfile(
         id = "creator-teniola",
-        artistName = "Teniola Blaze",
+        artistName = "Teniola Blaze (Demo Profile)",
         city = "Lagos, NG",
         genre = "Afrobeats / Street-Pop",
-        bio = "Independent Lagos vocalist & producer blending talking-drum percussion with neon synth hooks.",
+        bio =
+          "Illustrative independent creator profile using a first-party synthesized audio preview (mornica_afrobeats_demo.wav).",
         provenanceBadge = ProvenanceStatus.DEMO,
         rightsConfirmed = true,
         previewTrackIds = listOf("demo-lagos-pulse"),
-        officialYouTubeChannelUrl = "https://www.youtube.com/@TeniolaBlazeIndie",
+        officialYouTubeChannelUrl = null,
       ),
       CreatorProfile(
         id = "creator-kofi",
-        artistName = "Kofi & The LogDrums",
+        artistName = "Kofi & The LogDrums (Demo Profile)",
         city = "Accra · Johannesburg",
         genre = "Amapiano Crossover",
-        bio = "Pan-African log-drum collective releasing direct-to-fan instrumental & vocal club edits.",
-        provenanceBadge = ProvenanceStatus.LICENSED,
+        bio =
+          "Illustrative Amapiano showcase profile using a first-party synthesized audio preview; no third-party master is claimed.",
+        provenanceBadge = ProvenanceStatus.DEMO,
         rightsConfirmed = true,
         previewTrackIds = listOf("demo-lekki-logdrum"),
+        officialYouTubeChannelUrl = null,
       ),
       CreatorProfile(
         id = "creator-zainab",
-        artistName = "Zainab Soul",
+        artistName = "Zainab Soul (Demo Profile)",
         city = "Abuja, NG",
         genre = "Afro-Soul / Alté",
-        bio = "Acoustic and electronic Afro-Soul storyteller with verified studio demo stems.",
+        bio =
+          "Illustrative Afro-Soul showcase profile using a first-party synthesized audio preview (mornica_afrobeats_demo.wav).",
         provenanceBadge = ProvenanceStatus.DEMO,
         rightsConfirmed = true,
         previewTrackIds = listOf("demo-yaba-nights"),
+        officialYouTubeChannelUrl = null,
       ),
     )
 }

@@ -49,3 +49,13 @@ Third-party **vidIQ Nigerian monthly YouTube search estimates** provide directio
 - **Audio Files (`READ_MEDIA_AUDIO`)**: Processed **locally on-device only** to populate the user's "My Music" tabs (Songs, Folders, Artists, Albums). User audio files are **never uploaded** to ShadowSpark servers.
 - **Creator Launch Inquiries**: Voluntary user-submitted form fields (`Artist Name`, `Contact Email / WhatsApp`, `Track Title`, `Genre`, `Rights Attestation`) stored locally on device in MVP and transmitted only when the user explicitly submits an inquiry.
 - **YouTube Embedded Player**: Loads official `https://www.youtube.com/embed/{videoId}` over HTTPS; subject to Google/YouTube standard privacy policy disclosed in the in-app Privacy Notice.
+
+### Foreground Service (`mediaPlayback`) Declaration Readiness
+- **Declared Permissions**: `android.permission.FOREGROUND_SERVICE` and `android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK`.
+- **Service Component**: `com.shadowspark.morontomornica.domain.LocalAudioPlaybackService` (`android:foregroundServiceType="mediaPlayback"`, `androidx.media3.session.MediaSessionService`).
+- **Play Console Justification Copy**: *"Moronto Mornica uses a `mediaPlayback` foreground service (`LocalAudioPlaybackService` powered by AndroidX Media3 `ExoPlayer` and `MediaSessionService`) strictly so users can continue listening to their own offline device audio files (`MediaStore.Audio.Media`) and bundled first-party synth demo previews when they switch apps or lock their phone screen, with standard system notification and lock-screen transport controls. Embedded YouTube videos never use background playback and pause immediately when backgrounded."*
+- **Video Walkthrough Requirement**: Google Play Console requires a short screen-recording URL demonstrating the user starting an offline audio track in `My Music`, locking/minimizing the app, and controlling playback from the Android system media notification.
+- **Store Listing Assets & External Privacy Policy**:
+  - Adaptive launcher icons (`@mipmap/ic_launcher`, `@mipmap/ic_launcher_round`) and in-app Privacy, Data Safety & YouTube Policy Compliance card (`CreatorHubScreen`) are bundled.
+  - Device screenshots (`updated-home.png`, `updated-miniplayer.png`, `updated-player.png`) are captured at `/home/moronto/src/moronto-design-compare/`.
+  - Before submitting to Google Play Closed/Production tracks, publish the hosted Privacy Policy HTML page on the official ShadowSpark domain and link its public HTTPS URL in Play Console *App Content -> Privacy Policy*.

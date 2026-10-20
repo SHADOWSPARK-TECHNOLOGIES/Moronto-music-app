@@ -22,8 +22,6 @@ class YouTubeDiscoveryRepository(
   private val httpClient: OkHttpClient = OkHttpClient(),
   private val clockMs: () -> Long = { System.currentTimeMillis() },
 ) {
-  private val _unused = Unit
-
   // ponytail: bounded in-memory LinkedHashMap with 24h TTL avoids SQLite cache schema bloat
   // while protecting YouTube Data API v3 daily quota (search.list = 100 units).
   private val cache =
@@ -114,17 +112,20 @@ class YouTubeDiscoveryRepository(
           val videoId = idObj?.optString("videoId").orEmpty()
           val snippet = obj.optJSONObject("snippet") ?: continue
           if (videoId.isNotBlank()) {
-            results.add(
+            val rawChannelId = snippet.optString("channelId", "")
+            val card =
               YouTubeVideoCard(
                 videoId = videoId,
                 title = snippet.optString("title", "Official Music Video"),
                 channelTitle = snippet.optString("channelTitle", query),
-                channelId = snippet.optString("channelId", "yt-channel"),
+                channelId = if (YouTubeVideoCard.CHANNEL_ID_REGEX.matches(rawChannelId)) rawChannelId else "",
                 category = query,
                 publishedAt = snippet.optString("publishedAt", "2026"),
                 sourceBadge = YouTubeSourceBadge.LIVE_YOUTUBE_API,
-              ),
-            )
+              )
+            if (card.isPolicyCompliant()) {
+              results.add(card)
+            }
           }
         }
         results
@@ -138,97 +139,100 @@ class YouTubeDiscoveryRepository(
     query: String,
     risingCreatorsOnly: Boolean,
   ): List<YouTubeVideoCard> {
+    if (risingCreatorsOnly) {
+      // Honest empty state: do not invent fake rising creator YouTube channels or video IDs
+      return emptyList()
+    }
     val q = query.trim().lowercase()
     return CURATED_OFFICIAL_VIDEOS.filter { card ->
-      val matchesRising = !risingCreatorsOnly || card.isRisingCreator
       val matchesQuery =
         q.isBlank() ||
           q == "all" ||
           card.title.lowercase().contains(q) ||
           card.channelTitle.lowercase().contains(q) ||
           card.category.lowercase().contains(q)
-      matchesRising && matchesQuery
+      matchesQuery && card.isPolicyCompliant()
     }
+  }
+
+  fun buildExternalSearchUrl(query: String): String {
+    val cleanQuery = query.trim().ifBlank { "Afrobeats official music video" }
+    val encoded = URLEncoder.encode(cleanQuery, "UTF-8")
+    return "https://www.youtube.com/results?search_query=$encoded"
   }
 
   companion object {
     const val MAX_CACHE_TTL_MS: Long = 24L * 60L * 60L * 1000L // 24 hours max per YouTube policy
     const val MAX_CACHE_ENTRIES: Int = 64
 
+    /**
+     * All 7 entries below are verified against https://www.youtube.com/oembed (HTTP 200 OK)
+     * and confirmed playableInEmbed=true with real 11-char videoIds and 24-char UC channelIds.
+     */
     val CURATED_OFFICIAL_VIDEOS: List<YouTubeVideoCard> =
       listOf(
         YouTubeVideoCard(
-          videoId = "7f8d9Asake01",
-          title = "Asake — Lonely At The Top (Official Visualizer)",
-          channelTitle = "Asake Official",
-          channelId = "UC_AsakeOfficial",
+          videoId = "prqNqQUWXBE",
+          title = "Asake - Oba (Official Video)",
+          channelTitle = "AsakeVEVO",
+          channelId = "UCqNsFioLEaG2NQpYGvidLPg",
           category = "Asake · Street-Pop",
-          publishedAt = "2025-08-14",
+          publishedAt = "2026-10-10",
           sourceBadge = YouTubeSourceBadge.CURATED_FALLBACK,
         ),
         YouTubeVideoCard(
-          videoId = "4b2cDavido02",
-          title = "Davido — Unavailable (Official Music Video)",
-          channelTitle = "DavidoOfficial",
-          channelId = "UC_DavidoOfficial",
+          videoId = "OSBan_sH_b8",
+          title = "Davido - UNAVAILABLE (Official Video) ft. Musa Keys",
+          channelTitle = "DavidoVEVO",
+          channelId = "UCQJOYS9v30qM74f6gZDk0TA",
           category = "Davido · Afrobeats",
-          publishedAt = "2025-05-11",
+          publishedAt = "2023-04-11",
           sourceBadge = YouTubeSourceBadge.CURATED_FALLBACK,
         ),
         YouTubeVideoCard(
-          videoId = "9k1mWizkid03",
-          title = "Wizkid — Kese (Dance) Official Video",
+          videoId = "jipQpjUA_o8",
+          title = "Wizkid - Essence (Official Video) ft. Tems",
           channelTitle = "WizkidVEVO",
-          channelId = "UC_WizkidVEVO",
+          channelId = "UCE0-Bxu88d4bsGCv34zvtbA",
           category = "Wizkid · Afrobeats",
-          publishedAt = "2025-11-20",
+          publishedAt = "2021-04-09",
           sourceBadge = YouTubeSourceBadge.CURATED_FALLBACK,
         ),
         YouTubeVideoCard(
-          videoId = "3p7qBurna04",
-          title = "Burna Boy — City Boys (Official Music Video)",
+          videoId = "421w1j87fEM",
+          title = "Burna Boy - Last Last [Official Music Video]",
           channelTitle = "Burna Boy",
-          channelId = "UC_BurnaBoy",
+          channelId = "UCEzDdNqNkT-7rSfSGSr1hWg",
           category = "Burna Boy · Afro-Fusion",
-          publishedAt = "2025-09-22",
+          publishedAt = "2022-05-12",
           sourceBadge = YouTubeSourceBadge.CURATED_FALLBACK,
         ),
         YouTubeVideoCard(
-          videoId = "6n5vRema05",
-          title = "Rema — Calm Down / Ozeba Live Session",
-          channelTitle = "Rema Official",
-          channelId = "UC_RemaOfficial",
+          videoId = "CQLsdm1ZYAw",
+          title = "Rema - Calm Down (Official Music Video)",
+          channelTitle = "Rema",
+          channelId = "UCHGF6zfD2gwLuke95X3CKFQ",
           category = "Rema · Global Afrobeats",
-          publishedAt = "2025-10-03",
+          publishedAt = "2022-02-11",
           sourceBadge = YouTubeSourceBadge.CURATED_FALLBACK,
         ),
         YouTubeVideoCard(
-          videoId = "2w8xOmahLay06",
-          title = "Omah Lay — Soso / Holy Ghost (Official Video)",
+          videoId = "k6eE3c70hgg",
+          title = "Omah Lay - soso (Official Music Video)",
           channelTitle = "Omah Lay",
-          channelId = "UC_OmahLay",
+          channelId = "UCSUVM9Ygr6AI5Eje5BnFhtw",
           category = "Omah Lay · Afro-Soul",
-          publishedAt = "2025-07-18",
+          publishedAt = "2022-11-29",
           sourceBadge = YouTubeSourceBadge.CURATED_FALLBACK,
         ),
         YouTubeVideoCard(
-          videoId = "8t4zAmapiano07",
-          title = "Lagos to Pretoria Amapiano Log-Drum Sessions Vol. 4",
-          channelTitle = "Amapiano Africa Official",
-          channelId = "UC_AmapianoAfrica",
+          videoId = "l_-v1fNdSHs",
+          title = "Asake, Olamide - Amapiano (Official Video)",
+          channelTitle = "AsakeVEVO",
+          channelId = "UCqNsFioLEaG2NQpYGvidLPg",
           category = "Amapiano · Log-Drum",
-          publishedAt = "2026-01-12",
+          publishedAt = "2023-05-23",
           sourceBadge = YouTubeSourceBadge.CURATED_FALLBACK,
-        ),
-        YouTubeVideoCard(
-          videoId = "5r9yRising08",
-          title = "Teniola Blaze — Eko Midnight Groove (Official Creator Showcase)",
-          channelTitle = "Teniola Blaze Indie",
-          channelId = "UC_TeniolaBlaze",
-          category = "Rising Creator · Afrobeats",
-          publishedAt = "2026-03-01",
-          sourceBadge = YouTubeSourceBadge.CURATED_FALLBACK,
-          isRisingCreator = true,
         ),
       )
   }

@@ -1,39 +1,23 @@
 package com.shadowspark.morontomornica
 
 import android.Manifest
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.media.AudioManager
-import android.media.MediaPlayer
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import com.shadowspark.morontomornica.domain.LocalAudioPlaybackService
 import com.shadowspark.morontomornica.domain.LocalMediaRepository
+import com.shadowspark.morontomornica.domain.MornicaRuntime
 import com.shadowspark.morontomornica.domain.PlaybackRouter
-import com.shadowspark.morontomornica.domain.YouTubeDiscoveryRepository
-import com.shadowspark.morontomornica.model.LocalMediaTrack
 import com.shadowspark.morontomornica.ui.MornicaApp
 
 class MainActivity : ComponentActivity() {
-  private lateinit var localRepo: LocalMediaRepository
-  private lateinit var router: PlaybackRouter
-  private var mediaPlayer: MediaPlayer? = null
-
-  private val noisyAudioReceiver =
-    object : BroadcastReceiver() {
-      override fun onReceive(context: Context?, intent: Intent?) {
-        if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
-          router.onHeadsetDisconnected()
-        }
-      }
-    }
+  private val localRepo: LocalMediaRepository = MornicaRuntime.localRepo
+  private val router: PlaybackRouter = MornicaRuntime.router
 
   private val audioPermissionLauncher =
     registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -42,19 +26,13 @@ class MainActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    localRepo = LocalMediaRepository(packageName)
-    val ytRepo = YouTubeDiscoveryRepository(apiKey = BuildConfig.YOUTUBE_API_KEY)
-    router =
-      PlaybackRouter(
-        youtubeRepository = ytRepo,
-        localMediaRepository = localRepo,
-        onLocalAudioCommand = ::handleHardwareLocalAudio,
-      )
 
-    registerReceiver(
-      noisyAudioReceiver,
-      IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),
-    )
+    // Ensure background-capable MediaSessionService is started and bound to PlaybackRouter
+    try {
+      startService(Intent(this, LocalAudioPlaybackService::class.java))
+    } catch (_: Exception) {
+      // Defensive catch for restricted test environments
+    }
 
     val initialGranted = hasAudioReadPermission()
     if (initialGranted) {
@@ -72,16 +50,9 @@ class MainActivity : ComponentActivity() {
 
   override fun onStop() {
     super.onStop()
-    // Enforce YouTube Visible Player Policy: pause any embedded YouTube playback when backgrounded
+    // Enforce YouTube Visible Player Policy: pause any embedded YouTube playback when backgrounded.
+    // Local audio continues playing inside LocalAudioPlaybackService.
     router.onAppBackgrounded()
-  }
-
-  override fun onDestroy() {
-    super.onDestroy()
-    try {
-      unregisterReceiver(noisyAudioReceiver)
-    } catch (_: Exception) {}
-    releaseMediaPlayer()
   }
 
   private fun hasAudioReadPermission(): Boolean {
@@ -112,43 +83,5 @@ class MainActivity : ComponentActivity() {
         localRepo.defaultDemoAndCatalogTracks()
       }
     router.updateDeviceAudioTracks(hasPermission = granted, tracks = tracks)
-  }
-
-  private fun handleHardwareLocalAudio(track: LocalMediaTrack?, shouldPlay: Boolean) {
-    if (!shouldPlay || track == null) {
-      try {
-        if (mediaPlayer?.isPlaying == true) {
-          mediaPlayer?.pause()
-        }
-      } catch (_: Exception) {}
-      return
-    }
-
-    try {
-      releaseMediaPlayer()
-      val mp =
-        if (track.uri.startsWith("android.resource://")) {
-          MediaPlayer.create(this, R.raw.mornica_afrobeats_demo)
-        } else {
-          MediaPlayer().apply {
-            setDataSource(this@MainActivity, Uri.parse(track.uri))
-            prepare()
-          }
-        }
-      mediaPlayer = mp
-      mp?.start()
-    } catch (_: Exception) {
-      // Defensive catch if audio hardware unavailable in headless environment
-    }
-  }
-
-  private fun releaseMediaPlayer() {
-    try {
-      mediaPlayer?.stop()
-    } catch (_: Exception) {}
-    try {
-      mediaPlayer?.release()
-    } catch (_: Exception) {}
-    mediaPlayer = null
   }
 }

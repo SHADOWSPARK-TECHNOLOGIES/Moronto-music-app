@@ -28,13 +28,46 @@ android {
         keyPassword = "android"
       }
     }
+    create("release") {
+      val defaultUploadKeyPath =
+        "${System.getProperty("user.home")}/.local/share/moronto-mornica/signing/upload.jks"
+      val ksPath =
+        providers.environmentVariable("UPLOAD_KEYSTORE_PATH").orNull
+          ?: providers.gradleProperty("UPLOAD_KEYSTORE_PATH").orNull
+          ?: defaultUploadKeyPath
+      val ksFile = file(ksPath)
+      val ksPass =
+        providers.environmentVariable("UPLOAD_KEYSTORE_PASSWORD").orNull
+          ?: providers.gradleProperty("UPLOAD_KEYSTORE_PASSWORD").orNull
+      val aliasName =
+        providers.environmentVariable("UPLOAD_KEY_ALIAS").orNull
+          ?: providers.gradleProperty("UPLOAD_KEY_ALIAS").orNull
+          ?: "moronto-upload"
+      val aliasPass =
+        providers.environmentVariable("UPLOAD_KEY_PASSWORD").orNull
+          ?: providers.gradleProperty("UPLOAD_KEY_PASSWORD").orNull
+          ?: ksPass
+      if (ksFile.exists() && !ksPass.isNullOrBlank() && !aliasPass.isNullOrBlank()) {
+        storeFile = ksFile
+        storePassword = ksPass
+        keyAlias = aliasName
+        keyPassword = aliasPass
+      }
+    }
   }
 
   buildTypes {
     release {
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      // Release signing requires operator-supplied UPLOAD_KEYSTORE_PATH in production CI/Play upload
+      val releaseCfg = signingConfigs.findByName("release")
+      if (
+        releaseCfg?.storeFile?.exists() == true &&
+          !releaseCfg.storePassword.isNullOrBlank() &&
+          !releaseCfg.keyPassword.isNullOrBlank()
+      ) {
+        signingConfig = releaseCfg
+      }
     }
     debug {
       val debugCfg = signingConfigs.findByName("debugConfig")
@@ -80,6 +113,9 @@ dependencies {
   implementation(libs.androidx.lifecycle.runtime.compose)
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.lifecycle.viewmodel.compose)
+  implementation(libs.androidx.media3.common)
+  implementation(libs.androidx.media3.exoplayer)
+  implementation(libs.androidx.media3.session)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.okhttp)

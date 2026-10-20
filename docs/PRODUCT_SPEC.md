@@ -63,11 +63,12 @@ Product discovery defaults and initial artist/genre shelves are informed by thir
 
 - **Application ID**: `com.shadowspark.morontomornica`
 - **SDK Targets**: `compileSdk = 36 (minorApiLevel = 1)`, `targetSdk = 36`, `minSdk = 26`
-- **UI Stack**: Kotlin 2.2 + Jetpack Compose + Material 3 dark neon Afrobeats aesthetic (deep purple `#0D0714`, electric magenta `#FF2E93`, cyber blue `#00E5FF`).
-- **Permissions**:
+- **UI Stack**: Kotlin 2.2 + Jetpack Compose + Material 3 Midnight Slate (`#0B101B` / `#131D31`), Emerald (`#10B981`), Cyan (`#06B6D4`), and Amber (`#F59E0B` → `#EA580C`) palette.
+- **Permissions & Services**:
   - `android.permission.INTERNET` (YouTube embeds & official metadata)
   - `android.permission.READ_MEDIA_AUDIO` (Android 13+ user-selected/device audio library)
   - `android.permission.READ_EXTERNAL_STORAGE` (`maxSdkVersion="32"` for older devices)
+  - `android.permission.FOREGROUND_SERVICE` & `android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK` (strictly for `com.shadowspark.morontomornica.domain.LocalAudioPlaybackService` with `android:foregroundServiceType="mediaPlayback"` playing offline device/demo audio only)
 
 ---
 
