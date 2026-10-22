@@ -1,0 +1,65 @@
+name: Moronto Mornica Installable APK
+
+on:
+  push:
+    branches:
+      - agent/antigravity-mornica-launch-contract-20261019
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout app
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Make Gradle executable
+        run: chmod +x ./gradlew
+
+      - name: Verify and build APK
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug --stacktrace
+
+      - name: Prepare installable APK
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk Moronto-Mornica.apk
+          sha256sum Moronto-Mornica.apk > Moronto-Mornica.apk.sha256
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Moronto-Mornica-APK
+          path: |
+            Moronto-Mornica.apk
+            Moronto-Mornica.apk.sha256
+          retention-days: 30
+
+      - name: Publish stable GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: mornica-latest
+          target_commitish: ${{ github.sha }}
+          name: Moronto Mornica — Installable Android Build
+          prerelease: true
+          make_latest: true
+          body: |
+            Installable Android APK for Moronto Mornica.
+            
+            Package: com.shadowspark.morontomornica
+            Build source: ${{ github.sha }}
+            
+            On Android, download Moronto-Mornica.apk and allow installation from your browser/files app if prompted.
+          files: |
+            Moronto-Mornica.apk
+            Moronto-Mornica.apk.sha256
