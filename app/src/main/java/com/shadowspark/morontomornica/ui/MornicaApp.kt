@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -69,6 +71,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -96,6 +99,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -375,7 +382,7 @@ private fun MyMusicOfflineScreen(
       modifier = Modifier.fillMaxWidth(),
     ) {
       Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().selectableGroup(),
         horizontalArrangement = Arrangement.SpaceEvenly,
       ) {
         LibraryTab.entries.forEach { tab ->
@@ -385,13 +392,17 @@ private fun MyMusicOfflineScreen(
             modifier =
               Modifier
                 .weight(1f)
-                .clickable { router.selectLibraryTab(tab) }
+                .selectable(
+                  selected = isSelected,
+                  role = Role.Tab,
+                  onClick = { router.selectLibraryTab(tab) },
+                )
                 .padding(top = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
           ) {
             Icon(
               imageVector = libraryTabIcon(tab),
-              contentDescription = tab.label,
+              contentDescription = null,
               tint = tint,
               modifier = Modifier.size(20.dp),
             )
@@ -753,7 +764,10 @@ private fun LocalTrackItemCard(
       }
 
       Row(verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { router.toggleFavorite(track.id) }) {
+        IconToggleButton(
+          checked = isSaved,
+          onCheckedChange = { router.toggleFavorite(track.id) },
+        ) {
           Icon(
             imageVector = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
             contentDescription = if (isSaved) "Remove Favorite" else "Save Favorite",
@@ -906,23 +920,29 @@ private fun OfflineMiniPlayerBar(
           Box(
             modifier =
               Modifier
-                .sizeIn(minWidth = MornicaTokens.MinTouchTarget, minHeight = 38.dp)
-                .height(38.dp)
-                .clip(RoundedCornerShape(19.dp))
-                .background(MornicaAmberGradient)
-                .clickable { router.toggleLocalPlayPause() }
-                .padding(horizontal = 16.dp),
+                .sizeIn(minWidth = MornicaTokens.MinTouchTarget, minHeight = MornicaTokens.MinTouchTarget)
+                .clickable(role = Role.Button) { router.toggleLocalPlayPause() },
             contentAlignment = Alignment.Center,
           ) {
-            Icon(
-              imageVector = if (uiState.isLocalPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-              contentDescription = if (uiState.isLocalPlaying) "Pause" else "Play",
-              tint = Color(0xFF0B101B),
+            Box(
               modifier =
                 Modifier
-                  .size(22.dp)
-                  .offset(x = if (uiState.isLocalPlaying) 0.dp else 1.dp),
-            )
+                  .height(38.dp)
+                  .clip(RoundedCornerShape(19.dp))
+                  .background(MornicaAmberGradient)
+                  .padding(horizontal = 16.dp),
+              contentAlignment = Alignment.Center,
+            ) {
+              Icon(
+                imageVector = if (uiState.isLocalPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                contentDescription = if (uiState.isLocalPlaying) "Pause" else "Play",
+                tint = Color(0xFF0B101B),
+                modifier =
+                  Modifier
+                    .size(22.dp)
+                    .offset(x = if (uiState.isLocalPlaying) 0.dp else 1.dp),
+              )
+            }
           }
 
           IconButton(onClick = { router.skipNext() }) {
@@ -993,7 +1013,10 @@ private fun NowPlayingFullSheet(
               color = MornicaTextMuted,
             )
           }
-          IconButton(onClick = { router.toggleFavorite(active.id) }) {
+          IconToggleButton(
+            checked = isSaved,
+            onCheckedChange = { router.toggleFavorite(active.id) },
+          ) {
             Icon(
               imageVector = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
               contentDescription = "Favorite Track",
@@ -1097,7 +1120,11 @@ private fun NowPlayingFullSheet(
                 activeTrackColor = MornicaEmerald,
                 inactiveTrackColor = MornicaSlateBorder,
               ),
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+              Modifier.fillMaxWidth().semantics {
+                contentDescription = "Playback position"
+                stateDescription = "${formatDurationMs(position)} of ${formatDurationMs(maxDuration)}"
+              },
           )
           Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1124,7 +1151,10 @@ private fun NowPlayingFullSheet(
           horizontalArrangement = Arrangement.SpaceEvenly,
           verticalAlignment = Alignment.CenterVertically,
         ) {
-          IconButton(onClick = { router.toggleShuffle() }) {
+          IconToggleButton(
+            checked = uiState.shuffleEnabled,
+            onCheckedChange = { router.toggleShuffle() },
+          ) {
             Icon(
               imageVector = Icons.Default.Shuffle,
               contentDescription = "Toggle Shuffle",

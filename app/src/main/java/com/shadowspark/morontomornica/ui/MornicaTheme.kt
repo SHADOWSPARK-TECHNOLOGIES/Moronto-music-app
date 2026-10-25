@@ -46,7 +46,7 @@ object MornicaTokens {
   val SearchFieldRadius = 14.dp
   val SortPillRadius = 10.dp
   val NowPlayingArtworkRadius = 24.dp
-  val MinTouchTarget = 44.dp
+  val MinTouchTarget = 48.dp
   const val TABULAR_NUMS_FEATURE = "tnum"
 }
 
