@@ -72,3 +72,9 @@ Visual comparison between the original Google AI Studio build (`com.aistudio.mor
 - Codify `MornicaTokens` (`CardOuterRadius = 16.dp`, `CardInnerPadding = 12.dp`, `CardInnerEmblemRadius = 10.dp`, `MinTouchTarget = 44.dp`, `withTabularNums()` OpenType `tnum` feature) and optical `PlayArrow` alignment (`+1.dp` horizontal offset) per ECC `design-system` and `make-interfaces-feel-better` skills.
 - Restore the `MorontoTopHeader` (with `.statusBarsPadding()`), 5-tab Musicolet-inspired library sub-navigation (`Tracks`, `Queues`, `Albums`, `Artists`, `Folders`), live search + cyan rescan button, track counter + `Title / Artist / Duration / Year` sort pills, persistent `OfflineMiniPlayerBar`, and expandable full-screen `NowPlayingFullSheet` (`ac12`).
 
+
+## 2026-10-25 — Native accessibility semantics without stack migration
+
+Retain Kotlin/Compose/Material3 and existing PlaybackRouter contracts. Use native selectable/toggle components and additive Slider semantics instead of custom accessibility emulation. Reserve 48dp mini-player control space while preserving the compact visual. Add focused Compose tests using existing dependencies; do not add unrelated permissions, policy infrastructure or packages.
+
+Rationale: platform-native semantics minimize custom code and preserve interaction behavior. Neither a language choice nor this patch removes future maintenance/security updates. All runtime claims remain pending the documented build/toolchain and device gates. Uploaded methodology guides workflow, without replacing host authority or permissions.
