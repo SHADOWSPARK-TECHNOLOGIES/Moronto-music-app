@@ -1,0 +1,34 @@
+# Gradle & Android build artifacts
+.gradle/
+build/
+app/build/
+local.properties
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+captures/
+.externalNativeBuild/
+.cxx/
+*.jks
+*.keystore
+
+# Node / Web artifacts
+node_modules/
+dist/
+coverage/
+
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
