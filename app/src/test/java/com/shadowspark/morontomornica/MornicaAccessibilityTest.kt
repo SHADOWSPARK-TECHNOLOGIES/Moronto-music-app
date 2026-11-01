@@ -7,7 +7,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
-import androidx.compose.ui.test.assertHeightIsAtMost
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
@@ -16,8 +15,10 @@ import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
@@ -181,7 +182,8 @@ class MornicaAccessibilityTest {
   fun compactHeader_360dp_titleHasSingleLineHeight_andMenuPreservesInfoAction() {
     val router = PlaybackRouter()
     show(router)
-    compose.onNodeWithText("Moronto Music").assertHeightIsAtMost(48.dp)
+    val titleHeight = compose.onNodeWithText("Moronto Music").getUnclippedBoundsInRoot().height
+    assertTrue("Header title must not stack vertically: height=$titleHeight", titleHeight <= 48.dp)
     compose.onNodeWithContentDescription("More music controls and information").performClick()
     compose.onNodeWithText("About & Rights Info").performClick()
     compose.runOnIdle {
@@ -193,7 +195,8 @@ class MornicaAccessibilityTest {
   @Config(qualifiers = "w412dp-h915dp")
   fun compactHeader_412dp_titleHasSingleLineHeight() {
     show(PlaybackRouter())
-    compose.onNodeWithText("Moronto Music").assertHeightIsAtMost(48.dp)
+    val titleHeight = compose.onNodeWithText("Moronto Music").getUnclippedBoundsInRoot().height
+    assertTrue("Header title must not stack vertically: height=$titleHeight", titleHeight <= 48.dp)
   }
 
 }
