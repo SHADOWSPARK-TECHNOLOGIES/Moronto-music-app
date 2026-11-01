@@ -2,8 +2,8 @@
 
 Date: 2026-11-01
 Objective: Loop 1 shared-header repair
-Iteration: 3 of maximum 8
-Verdict: AUTOMATED_GATE_PASS; FINAL_UI_GATE_PENDING (not full Loop 1 PASS)
+Iteration: 5 of maximum 8
+Verdict: AUTOMATED_GATE_PASS; EMULATOR_CAPTURE_PASS; VISUAL_AND_INTEGRATION_GATES_PENDING
 
 ## Verified / completed
 - Source baseline: `320cb67b8051153cdf505e0d021b88e602b8420c`; candidate branch: `agent/mornica-loop1-header-20261101`.
@@ -45,3 +45,14 @@ Verdict: AUTOMATED_GATE_PASS; FINAL_UI_GATE_PENDING (not full Loop 1 PASS)
 - Verify on emulator or isolated install without overwriting existing phone app/data.
 - Capture rendered 360dp, 412dp and large-font screenshots, including full-player and navigation checks.
 - Validate playback is unchanged and compare the patched header against uncommitted original worktree source before integrating.
+
+## Emulator screenshot run (user supplied, 2026-11-01)
+- Worktree at `aa37e4d` after fetching isolated branch and syntax-checking `docs/agent-loop/verify-emulator.sh`.
+- AVD `Medium_Phone_API_37.0` located under `~/.config/.android/avd` and booted; a second duplicate start exited with status 1 but did not affect first instance.
+- `bash docs/agent-loop/verify-emulator.sh emulator-5554` completed with `CAPTURED: emulator screenshots only`.
+- Candidate APK installed on emulator, `adb install` reported `Success`; physical Infinix was not targeted.
+- Candidate APK SHA-256: `17b1506ca2e471def05069f2b417b03dc91f62c847397e5cf959fff98783e517`.
+- Foreground validation reported `com.shadowspark.morontomornica/.MainActivity` for each capture.
+- Captures stored locally (NOT yet inspected or uploaded): `docs/screenshots/loop1-candidate/header-360dp-normal.png`, `header-412dp-normal.png`, `header-360dp-large-font.png`.
+- Screen settings were changed via the guarded script; script contains an EXIT trap to restore original size, density and font scale, but restored settings were not separately measured in the log.
+- Next: visually inspect screenshots and overflow menu, expanded-player and Media3 behavior, then compare with original uncommitted workspace before declaring PASS.
