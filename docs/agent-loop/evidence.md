@@ -46,3 +46,17 @@ Automated build gate PASS. Visual/device and local-integration gates PENDING. Lo
 - Foreground `mCurrentFocus` was Mornica `MainActivity` at all captures.
 - File names: `docs/screenshots/loop1-candidate/header-360dp-normal.png`, `header-412dp-normal.png`, `header-360dp-large-font.png` (user local files, not available to this reviewer).
 - **Capturing is not visual inspection.** Header legibility, menu hit testing and player playback remain unverified in this evidence record.
+
+## Uploaded visual review: six images, 2026-11-01
+
+The user attached `01_device_initial_launch.png`, `header_after_fix.png`, `header_before_fix.png`, `player_consistency_device_current.png`, `player_consistency_main.png`, and `player_consistency_my_music.png`. This reviewer inspected the attachments directly, not from the emulator capture script paths.
+
+- `header_after_fix.png`: visible header branded **Mornica**, subtitle **by ShadowSpark Technologies**, search, AI discovery and overflow buttons; no character-by-character vertical title stacking. General appearance/layout PASS for the image only.
+- `player_consistency_main.png`: same Mornica header; My Music library tracks and bottom navigation present. No expanded player or verified playback visible.
+- `player_consistency_my_music.png`: header and bottom navigation visible; amber status banner beginning `YouTube embed paused while outside Discover & Watch` appears truncated at right; needs responsive check.
+- `header_before_fix.png` and `player_consistency_device_current.png`: Android notification shade, not app-header comparison images; do not use as baseline or playback acceptance. Screens include private notifications; do not redistribute them.
+- `01_device_initial_launch.png`: ChatGPT conversation screen, not Mornica app.
+- **Source-provenance mismatch:** these visible Mornica screenshots show `Mornica` plus a search icon. PR #5 candidate header source shows `Moronto Music` and only AI and overflow icons in `MorontoTopHeader`. Therefore these images do not establish which APK/worktree they came from, and cannot independently verify the isolated PR screenshot gate.
+- The successful emulator-capture log is still valid for `emulator-5554`, but the three specifically named `header-360dp-normal.png`, `header-412dp-normal.png` and `header-360dp-large-font.png` have NOT yet been attached for visual inspection.
+
+**Visual gate: PARTIAL (local-looking Mornica header readable). Candidate emulator visual gate: PENDING.** Overflow-menu interaction, expanded player, Media3 runtime, accessibility font scale and uncommitted integration remain pending.
