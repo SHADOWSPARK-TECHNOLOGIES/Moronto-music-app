@@ -7,6 +7,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertHeightIsAtMost
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
@@ -175,4 +176,24 @@ class MornicaAccessibilityTest {
       assertFalse(router.state.value.isNowPlayingExpanded)
     }
   }
+  @Test
+  @Config(qualifiers = "w360dp-h800dp")
+  fun compactHeader_360dp_titleHasSingleLineHeight_andMenuPreservesInfoAction() {
+    val router = PlaybackRouter()
+    show(router)
+    compose.onNodeWithText("Moronto Music").assertHeightIsAtMost(48.dp)
+    compose.onNodeWithContentDescription("More music controls and information").performClick()
+    compose.onNodeWithText("About & Rights Info").performClick()
+    compose.runOnIdle {
+      assertEquals(com.shadowspark.morontomornica.model.PrimaryScreen.CREATOR_HUB, router.state.value.currentScreen)
+    }
+  }
+
+  @Test
+  @Config(qualifiers = "w412dp-h915dp")
+  fun compactHeader_412dp_titleHasSingleLineHeight() {
+    show(PlaybackRouter())
+    compose.onNodeWithText("Moronto Music").assertHeightIsAtMost(48.dp)
+  }
+
 }
