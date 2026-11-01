@@ -38,3 +38,11 @@ State: AUTOMATED_GATE_PASS / DEVICE_GATE_PENDING
 
 ## Status
 Automated build gate PASS. Visual/device and local-integration gates PENDING. Loop 1 full PASS is not yet justified.
+
+## Emulator acceptance evidence (user-provided terminal, 2026-11-01)
+- `adb -s emulator-5554 shell getprop sys.boot_completed` returned `1`.
+- Emulator screenshot harness reported `APK SHA-256: 17b1506ca2e471def05069f2b417b03dc91f62c847397e5cf959fff98783e517`.
+- `adb install` reported `Success`, no replacement of a physical phone app.
+- Foreground `mCurrentFocus` was Mornica `MainActivity` at all captures.
+- File names: `docs/screenshots/loop1-candidate/header-360dp-normal.png`, `header-412dp-normal.png`, `header-360dp-large-font.png` (user local files, not available to this reviewer).
+- **Capturing is not visual inspection.** Header legibility, menu hit testing and player playback remain unverified in this evidence record.
