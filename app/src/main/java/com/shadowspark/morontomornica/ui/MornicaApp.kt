@@ -243,6 +243,8 @@ private fun MorontoTopHeader(
   onEqualizerClick: () -> Unit,
   onInfoClick: () -> Unit,
 ) {
+  var overflowExpanded by remember { mutableStateOf(false) }
+
   Surface(
     color = MornicaSlateHeader,
     modifier = Modifier.fillMaxWidth().statusBarsPadding(),
@@ -253,7 +255,6 @@ private fun MorontoTopHeader(
           Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
       ) {
         Row(
@@ -277,66 +278,78 @@ private fun MorontoTopHeader(
               modifier = Modifier.size(22.dp),
             )
           }
-          Column {
+          Column(modifier = Modifier.weight(1f)) {
             Text(
               text = "Moronto Music",
               style = MaterialTheme.typography.titleLarge,
               fontWeight = FontWeight.ExtraBold,
               color = MornicaTextLight,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis,
             )
             Text(
               text = "by ShadowSpark Technologies ⚡",
               style = MaterialTheme.typography.labelMedium,
               color = MornicaCyan,
               fontWeight = FontWeight.SemiBold,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis,
             )
           }
         }
 
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-          IconButton(onClick = onAiDiscoveryClick) {
+        IconButton(onClick = onAiDiscoveryClick) {
+          Icon(
+            imageVector = Icons.Default.AutoAwesome,
+            contentDescription = "AI & YouTube Discovery",
+            tint = MornicaGoldSparkle,
+            modifier = Modifier.size(20.dp),
+          )
+        }
+        Box {
+          IconButton(onClick = { overflowExpanded = true }) {
             Icon(
-              imageVector = Icons.Default.AutoAwesome,
-              contentDescription = "AI & YouTube Discovery",
-              tint = MornicaGoldSparkle,
-              modifier = Modifier.size(20.dp),
-            )
-          }
-          IconButton(onClick = onEqualizerClick) {
-            Icon(
-              imageVector = Icons.Default.Timer,
-              contentDescription = "Playback Timer & Controls",
+              imageVector = Icons.Default.MoreVert,
+              contentDescription = "More music controls and information",
               tint = MornicaTextMuted,
-              modifier = Modifier.size(20.dp),
             )
           }
-          IconButton(onClick = onEqualizerClick) {
-            Icon(
-              imageVector = Icons.Default.Equalizer,
-              contentDescription = "Audio Equalizer & Now Playing",
-              tint = MornicaCyan,
-              modifier = Modifier.size(20.dp),
+          DropdownMenu(
+            expanded = overflowExpanded,
+            onDismissRequest = { overflowExpanded = false },
+          ) {
+            DropdownMenuItem(
+              text = { Text("Playback Timer & Controls") },
+              onClick = {
+                overflowExpanded = false
+                onEqualizerClick()
+              },
+              leadingIcon = {
+                Icon(Icons.Default.Timer, contentDescription = null)
+              },
             )
-          }
-          IconButton(onClick = onInfoClick) {
-            Box(
-              modifier =
-                Modifier
-                  .size(24.dp)
-                  .clip(CircleShape)
-                  .background(MornicaInfoBlue),
-              contentAlignment = Alignment.Center,
-            ) {
-              Icon(
-                imageVector = Icons.Default.Info,
-                contentDescription = "About & Rights Info",
-                tint = MornicaTextLight,
-                modifier = Modifier.size(16.dp),
-              )
-            }
+            DropdownMenuItem(
+              text = { Text("Audio Equalizer & Now Playing") },
+              onClick = {
+                overflowExpanded = false
+                onEqualizerClick()
+              },
+              leadingIcon = {
+                Icon(Icons.Default.Equalizer, contentDescription = null)
+              },
+            )
+            DropdownMenuItem(
+              text = { Text("About & Rights Info") },
+              onClick = {
+                overflowExpanded = false
+                onInfoClick()
+              },
+              leadingIcon = {
+                Icon(Icons.Default.Info, contentDescription = null)
+              },
+            )
           }
         }
       }
