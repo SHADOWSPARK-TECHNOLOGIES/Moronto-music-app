@@ -182,7 +182,8 @@ class MornicaAccessibilityTest {
   fun compactHeader_360dp_titleHasSingleLineHeight_andMenuPreservesInfoAction() {
     val router = PlaybackRouter()
     show(router)
-    val titleHeight = compose.onNodeWithText("Moronto Music").getUnclippedBoundsInRoot().height
+    val titleBounds = compose.onNodeWithText("Moronto Music").getUnclippedBoundsInRoot()
+    val titleHeight = titleBounds.bottom - titleBounds.top
     assertTrue("Header title must not stack vertically: height=$titleHeight", titleHeight <= 48.dp)
     compose.onNodeWithContentDescription("More music controls and information").performClick()
     compose.onNodeWithText("About & Rights Info").performClick()
@@ -195,7 +196,8 @@ class MornicaAccessibilityTest {
   @Config(qualifiers = "w412dp-h915dp")
   fun compactHeader_412dp_titleHasSingleLineHeight() {
     show(PlaybackRouter())
-    val titleHeight = compose.onNodeWithText("Moronto Music").getUnclippedBoundsInRoot().height
+    val titleBounds = compose.onNodeWithText("Moronto Music").getUnclippedBoundsInRoot()
+    val titleHeight = titleBounds.bottom - titleBounds.top
     assertTrue("Header title must not stack vertically: height=$titleHeight", titleHeight <= 48.dp)
   }
 
