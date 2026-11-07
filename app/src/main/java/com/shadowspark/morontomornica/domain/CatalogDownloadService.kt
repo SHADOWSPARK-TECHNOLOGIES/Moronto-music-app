@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import androidx.core.app.NotificationCompat
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.offline.Download
@@ -19,6 +20,7 @@ import java.util.concurrent.Executors
  * SAME SimpleCache (MediaCache) that playback reads through, so a completed download is served
  * offline by the cache. Pattern matches MornicaRuntime: lazily wired with a Context.
  */
+@OptIn(UnstableApi::class)
 object CatalogDownloads {
   @Volatile var mediaDownloadManager: DownloadManager? = null
 
@@ -49,6 +51,7 @@ object CatalogDownloads {
  * gives Media3 a foreground notification and survives process death via the persisted DownloadIndex
  * (resume/restart handled by Media3 on service restart).
  */
+@OptIn(UnstableApi::class)
 class CatalogDownloadService :
   DownloadService(
     /* foregroundNotificationId = */ 1,
