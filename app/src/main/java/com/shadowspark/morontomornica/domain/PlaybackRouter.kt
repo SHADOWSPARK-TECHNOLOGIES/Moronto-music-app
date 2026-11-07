@@ -205,7 +205,7 @@ class PlaybackRouter(
   /**
    * AC-1, AC-2, AC-6: Starts a local device track or rights-cleared DEMO preview.
    * Rejects UNAVAILABLE/unlicensed tracks and rejects any YouTube URL/URI.
-   * Immediately stops any active YouTube embed.
+   * Clears any legacy embed state; no in-app YouTube playback is allowed.
    */
   fun playLocalTrack(track: LocalMediaTrack): Boolean {
     if (LocalMediaTrack.isYouTubeUri(track.uri)) {
