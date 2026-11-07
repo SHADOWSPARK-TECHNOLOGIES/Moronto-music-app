@@ -1321,7 +1321,7 @@ private fun DiscoverWatchScreen(
         FilterChip(
           selected = uiState.searchQuery.equals("All", ignoreCase = true) && !uiState.risingCreatorsOnly,
           onClick = { router.updateSearchQuery("All", risingOnly = false) },
-          label = { Text("All African Hits") },
+          label = { Text("All videos") },
         )
         uiState.researchEstimates.forEach { est ->
           FilterChip(
