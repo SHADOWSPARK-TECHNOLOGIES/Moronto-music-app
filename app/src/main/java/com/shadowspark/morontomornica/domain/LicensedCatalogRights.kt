@@ -120,7 +120,7 @@ class LicensedCatalogRights(
             host == "googlevideo.com" || host.endsWith(".googlevideo.com")
         !forbidden && host in hosts
       }
-    } catch (_: IllegalArgumentException) {
+    } catch (_: Exception) {
       false
     }
   }
