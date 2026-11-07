@@ -24,6 +24,7 @@ class LicensedCatalogRightsTest {
     licenseReference = "TEST-ONLY-NOT-A-REAL-LICENSE",
     allowedTerritories = setOf("NG"),
     licenseExpiresAtEpochMs = now + 60_000,
+    rightsConfirmed = true,
     streamAllowed = true,
     offlineAllowed = true,
   )
@@ -62,6 +63,10 @@ class LicensedCatalogRightsTest {
     assertEquals(
       CatalogDenial.MISSING_LICENSE,
       gate.evaluate(fixture().copy(licenseReference = ""), CatalogAccess.STREAM, "NG").denial,
+    )
+    assertEquals(
+      CatalogDenial.UNVERIFIED_RIGHTS,
+      gate.evaluate(fixture().copy(rightsConfirmed = false), CatalogAccess.STREAM, "NG").denial,
     )
     assertEquals(
       CatalogDenial.LICENSE_EXPIRED,
@@ -107,5 +112,33 @@ class LicensedCatalogRightsTest {
     )
     assertFalse(hostileConfiguration.isTrustedHttpsMediaUrl(banned[0]))
     assertFalse(hostileConfiguration.isTrustedHttpsMediaUrl(banned[1]))
+  }
+
+  @Test fun unverifiedRightsFailClosedForAllAccessActions() {
+    val unverified = fixture().copy(rightsConfirmed = false)
+    assertEquals(
+      CatalogDenial.UNVERIFIED_RIGHTS,
+      gate.evaluate(unverified, CatalogAccess.STREAM, "NG").denial,
+    )
+    assertEquals(
+      CatalogDenial.UNVERIFIED_RIGHTS,
+      gate.evaluate(unverified, CatalogAccess.SAVE_OFFLINE, "NG").denial,
+    )
+    assertEquals(
+      CatalogDenial.UNVERIFIED_RIGHTS,
+      gate.evaluate(unverified, CatalogAccess.PLAY_DOWNLOADED, "NG", downloadCompleted = true).denial,
+    )
+  }
+
+  @Test fun noConfiguredMediaHostsMeansNoOnlinePlaybackOrOfflineSaves() {
+    val unconfigured = LicensedCatalogRights(emptySet(), clockMs = { now })
+    assertEquals(
+      CatalogDenial.INVALID_SOURCE,
+      unconfigured.evaluate(fixture(), CatalogAccess.STREAM, "NG").denial,
+    )
+    assertEquals(
+      CatalogDenial.INVALID_SOURCE,
+      unconfigured.evaluate(fixture(), CatalogAccess.SAVE_OFFLINE, "NG").denial,
+    )
   }
 }

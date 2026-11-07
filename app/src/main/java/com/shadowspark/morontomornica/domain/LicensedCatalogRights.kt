@@ -20,6 +20,7 @@ data class LicensedCatalogTrack(
   val licenseReference: String,
   val allowedTerritories: Set<String>,
   val licenseExpiresAtEpochMs: Long?,
+  val rightsConfirmed: Boolean,
   val streamAllowed: Boolean,
   val offlineAllowed: Boolean,
 )
@@ -34,6 +35,7 @@ enum class CatalogDenial {
   NONE,
   INVALID_SOURCE,
   MISSING_LICENSE,
+  UNVERIFIED_RIGHTS,
   TERRITORY_UNAVAILABLE,
   LICENSE_EXPIRED,
   STREAM_NOT_AUTHORIZED,
@@ -80,6 +82,12 @@ class LicensedCatalogRights(
         track.artist.isBlank()
     ) {
       return CatalogAccessDecision.deny(CatalogDenial.MISSING_LICENSE)
+    }
+
+    // Rights must be explicitly confirmed by a trusted catalogue/backend before any
+    // territory, expiry or streaming decision; a missing confirmation fails closed.
+    if (!track.rightsConfirmed) {
+      return CatalogAccessDecision.deny(CatalogDenial.UNVERIFIED_RIGHTS)
     }
 
     val normalizedTerritory = territory.uppercase(Locale.ROOT)
