@@ -35,6 +35,8 @@ class MainActivity : ComponentActivity() {
         // Defensive catch for restricted test environments
       }
     }
+    // Loop 4: enable catalogue downloads (DownloadService), cancel, and Wi-Fi-only on the real manager.
+    MornicaRuntime.wireCatalogDownloads(appContext)
     ensurePlaybackServiceStarted()
 
     val initialGranted = hasAudioReadPermission()
