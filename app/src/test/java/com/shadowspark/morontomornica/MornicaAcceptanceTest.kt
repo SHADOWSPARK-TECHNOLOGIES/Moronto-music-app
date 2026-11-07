@@ -111,29 +111,23 @@ class MornicaAcceptanceTest {
   }
 
   @Test
-  fun ac2_playbackArbitration_switchingBetweenYouTubeAndLocalAudioPausesOtherEngine() {
+  fun ac2_nativePlayerRejectsYouTubeEmbedWithoutPausingLocalAudio() {
     val router = PlaybackRouter()
     val demoTrack = router.state.value.localTracks.first { it.isPlayableOffline() }
-    val ytVideo = router.state.value.youtubeVideos.first()
+    val video = router.state.value.youtubeVideos.first()
 
-    // 1. Start local audio first
     assertTrue(router.playLocalTrack(demoTrack))
     assertEquals(ActiveEngine.LOCAL_AUDIO, router.state.value.activeEngine)
     assertTrue(router.state.value.isLocalPlaying)
-    assertFalse(router.state.value.isYouTubeEmbedPlaying)
 
-    // 2. Start YouTube embed -> must pause local audio immediately
-    assertTrue(router.startYouTubeEmbed(ytVideo, viewportWidthDp = 360, viewportHeightDp = 220))
-    assertEquals(ActiveEngine.YOUTUBE_EMBED, router.state.value.activeEngine)
-    assertTrue(router.state.value.isYouTubeEmbedPlaying)
-    assertFalse(router.state.value.isLocalPlaying)
-
-    // 3. Start local audio again -> must stop YouTube embed immediately
-    assertTrue(router.playLocalTrack(demoTrack))
-    assertEquals(ActiveEngine.LOCAL_AUDIO, router.state.value.activeEngine)
-    assertTrue(router.state.value.isLocalPlaying)
+    // A valid YouTube video must never create a hidden player or hijack local audio.
+    assertFalse(router.startYouTubeEmbed(video, viewportWidthDp = 360, viewportHeightDp = 220))
     assertFalse(router.state.value.isYouTubeEmbedPlaying)
+    assertFalse(router.state.value.isYouTubeViewportVisible)
     assertNull(router.state.value.activeYouTubeVideo)
+    assertEquals(ActiveEngine.LOCAL_AUDIO, router.state.value.activeEngine)
+    assertTrue(router.state.value.isLocalPlaying)
+    assertTrue(video.officialWatchUrl().startsWith("https://www.youtube.com/watch?v="))
   }
 
   @Test
@@ -191,25 +185,21 @@ class MornicaAcceptanceTest {
   }
 
   @Test
-  fun ac5_visiblePlayerAndBackgroundPause_blocksUndersizedEmbedAndPausesOnBackground() {
+  fun ac5_noEmbeddedYouTubePlayerRegardlessOfViewportOrLifecycle() {
     val router = PlaybackRouter()
-    val ytVideo = router.state.value.youtubeVideos.first()
+    val video = router.state.value.youtubeVideos.first()
 
-    // Undersized viewport (< 200dp) must be rejected per YouTube policy
-    assertFalse(router.startYouTubeEmbed(ytVideo, viewportWidthDp = 120, viewportHeightDp = 120))
+    // Neither small nor policy-sized WebView can activate embedded playback.
+    assertFalse(router.startYouTubeEmbed(video, viewportWidthDp = 120, viewportHeightDp = 120))
+    assertFalse(router.startYouTubeEmbed(video, viewportWidthDp = 320, viewportHeightDp = 220))
     assertFalse(router.state.value.isYouTubeEmbedPlaying)
 
-    // Valid visible viewport (>= 200dp) succeeds
-    assertTrue(router.startYouTubeEmbed(ytVideo, viewportWidthDp = 320, viewportHeightDp = 220))
-    assertTrue(router.state.value.isYouTubeEmbedPlaying)
+    router.onYouTubeVisibilityChanged(true)
+    assertFalse(router.state.value.isYouTubeViewportVisible)
 
-    // App backgrounding or switching screens pauses YouTube embed immediately
     router.onAppBackgrounded()
-    assertFalse(router.state.value.isYouTubeEmbedPlaying)
-
-    // Restart and switch to My Music screen -> pauses YouTube embed
-    assertTrue(router.startYouTubeEmbed(ytVideo, viewportWidthDp = 320, viewportHeightDp = 220))
     router.selectScreen(PrimaryScreen.MY_MUSIC)
+    assertNull(router.state.value.activeYouTubeVideo)
     assertFalse(router.state.value.isYouTubeEmbedPlaying)
   }
 

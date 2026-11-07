@@ -57,7 +57,7 @@ data class MornicaUiState(
   val externalYouTubeSearchUrl: String = "https://www.youtube.com/results?search_query=Asake",
   val activeYouTubeVideo: YouTubeVideoCard? = null,
   val isYouTubeEmbedPlaying: Boolean = false,
-  val isYouTubeViewportVisible: Boolean = true,
+  val isYouTubeViewportVisible: Boolean = false,
   // Domain B: Musicolet-style Local Audio
   val hasAudioPermission: Boolean = false,
   val selectedLibraryTab: LibraryTab = LibraryTab.SONGS,
@@ -135,23 +135,12 @@ class PlaybackRouter(
 
   fun selectScreen(screen: PrimaryScreen) {
     _state.update { current ->
-      // If navigating away from Discover & Watch, pause embedded YouTube video so it never plays hidden
-      val shouldPauseYouTube =
-        screen != PrimaryScreen.DISCOVER_WATCH && current.isYouTubeEmbedPlaying
-      if (shouldPauseYouTube) {
-        current.copy(
-          currentScreen = screen,
-          isYouTubeEmbedPlaying = false,
-          isYouTubeViewportVisible = false,
-          statusBannerMessage =
-            "YouTube embed paused while outside Discover & Watch (Visible Player Policy).",
-        )
-      } else {
-        current.copy(
-          currentScreen = screen,
-          isYouTubeViewportVisible = screen == PrimaryScreen.DISCOVER_WATCH,
-        )
-      }
+      current.copy(
+        currentScreen = screen,
+        activeYouTubeVideo = null,
+        isYouTubeEmbedPlaying = false,
+        isYouTubeViewportVisible = false,
+      )
     }
   }
 
@@ -169,81 +158,54 @@ class PlaybackRouter(
   }
 
   /**
-   * AC-1, AC-2, AC-5, AC-7: Starts an official YouTube video in the visible embed player.
-   * Immediately pauses local audio so both engines never collide.
-   * Never checks any premium/subscription flag because YouTube embeds must remain 100% free.
+   * Legacy API remains for compatibility with existing callers/tests.
+   * Current product policy deliberately forbids in-app YouTube playback.
+   * Videos may only be opened through a clearly labeled external YouTube intent.
    */
+  @Suppress("UNUSED_PARAMETER")
   fun startYouTubeEmbed(
     video: YouTubeVideoCard,
     viewportWidthDp: Int = 320,
     viewportHeightDp: Int = 220,
   ): Boolean {
-    if (!video.isPolicyCompliant()) {
-      _state.update {
-        it.copy(statusBannerMessage = "Blocked: Video metadata failed YouTube policy validation.")
-      }
-      return false
-    }
-    if (viewportWidthDp < MIN_YOUTUBE_VIEWPORT_DP || viewportHeightDp < MIN_YOUTUBE_VIEWPORT_DP) {
-      _state.update {
-        it.copy(
-          isYouTubeEmbedPlaying = false,
-          statusBannerMessage =
-            "Blocked: YouTube player viewport must be at least 200dp x 200dp and visible.",
-        )
-      }
-      return false
-    }
-
-    onLocalAudioCommand?.invoke(null, false)
-    localAudioController?.setPlayWhenReady(false)
     _state.update {
       it.copy(
-        currentScreen = PrimaryScreen.DISCOVER_WATCH,
-        activeEngine = ActiveEngine.YOUTUBE_EMBED,
-        activeYouTubeVideo = video,
-        isYouTubeEmbedPlaying = true,
-        isYouTubeViewportVisible = true,
-        isLocalPlaying = false,
-        statusBannerMessage = "Playing official YouTube embed: ${video.title}",
+        activeYouTubeVideo = null,
+        isYouTubeEmbedPlaying = false,
+        isYouTubeViewportVisible = false,
+        statusBannerMessage = "This video opens on YouTube. Mornica does not embed YouTube playback.",
       )
     }
-    return true
+    return false
   }
 
+  /** Local audio stays alive in its MediaSessionService when the app backgrounds. */
   fun onAppBackgrounded() {
-    _state.update { current ->
-      // Pause YouTube when backgrounded; local audio in LocalAudioPlaybackService keeps playing
-      if (current.isYouTubeEmbedPlaying) {
-        current.copy(
-          isYouTubeEmbedPlaying = false,
-          statusBannerMessage =
-            "YouTube playback paused in background per Google Play & YouTube policy.",
-        )
-      } else {
-        current
-      }
+    _state.update {
+      it.copy(
+        activeYouTubeVideo = null,
+        isYouTubeEmbedPlaying = false,
+        isYouTubeViewportVisible = false,
+      )
     }
   }
 
+  /** Defense in depth: never permit an in-app YouTube viewport. */
+  @Suppress("UNUSED_PARAMETER")
   fun onYouTubeVisibilityChanged(isVisible: Boolean) {
-    _state.update { current ->
-      if (!isVisible && current.isYouTubeEmbedPlaying) {
-        current.copy(
-          isYouTubeViewportVisible = false,
-          isYouTubeEmbedPlaying = false,
-          statusBannerMessage = "YouTube embed paused when player hidden.",
-        )
-      } else {
-        current.copy(isYouTubeViewportVisible = isVisible)
-      }
+    _state.update {
+      it.copy(
+        activeYouTubeVideo = null,
+        isYouTubeEmbedPlaying = false,
+        isYouTubeViewportVisible = false,
+      )
     }
   }
 
   /**
    * AC-1, AC-2, AC-6: Starts a local device track or rights-cleared DEMO preview.
    * Rejects UNAVAILABLE/unlicensed tracks and rejects any YouTube URL/URI.
-   * Immediately stops any active YouTube embed.
+   * Clears any legacy embed state; no in-app YouTube playback is allowed.
    */
   fun playLocalTrack(track: LocalMediaTrack): Boolean {
     if (LocalMediaTrack.isYouTubeUri(track.uri)) {
