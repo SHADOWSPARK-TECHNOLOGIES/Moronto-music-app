@@ -568,13 +568,13 @@ private fun MyMusicOfflineScreen(
             ) {
               Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                 Text(
-                  text = "Bundled First-Party Synth Previews Active",
+                  text = "Your music, your way · No data? No wahala.",
                   style = MaterialTheme.typography.labelLarge,
                   fontWeight = FontWeight.Bold,
                   color = MornicaEmerald,
                 )
                 Text(
-                  text = "Tap Rescan or Grant Audio Access to load your phone's MP3, FLAC, and WAV folders.",
+                  text = "Play music already on your phone, even offline. Tap Scan Phone to find your audio files.",
                   style = MaterialTheme.typography.bodySmall,
                   color = MornicaTextMuted,
                 )
