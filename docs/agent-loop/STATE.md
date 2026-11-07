@@ -24,15 +24,12 @@ Authoritative spec: `docs/agent-loop/MORNICA_NIGERIA_FIRST_STREAMING_OFFLINE_SPE
       download-store 6, acceptance 12, accessibility 7)
 - [x] device-verified: `connectedDebugAndroidTest` 2/2 on API 37 x86_64 emulator:
       CatalogDownloadInstrumentedTest (authorized demo track → DownloadManager COMPLETED; stream-only
-      refused, never in index) AND CatalogOfflinePlaybackInstrumentedTest (download → bytes durably in
-      Media3 cache keyed by URI; stream-only refused)
+      refused, never in index) AND CatalogOfflinePlaybackInstrumentedTest (download → full bytes durably
+      in the Media3 cache keyed by URI → OFFLINE PLAYBACK proven: reached a playing state with
+      FLAG_BLOCK_ON_CACHE, i.e. upstream access impossible, so audio rendered entirely from cache)
 - [x] build-verified: `:app:assembleDebug` produces debug APK
-- [ ] PENDING offline PLAYBACK (radio truly off): app cannot toggle airplane mode (Android protects
-      the AIRPLANE_MODE broadcast even with WRITE_SECURE_SETTINGS granted; dead-upstream CacheDataSource
-      probe surfaced that cache-serving to playback needs a follow-up investigation). Bytes verified in
-      cache but rendering-with-no-network is NOT yet claimed.
-- [ ] unverified: audible real-speaker (human); real licensed catalogue (present is demo fixtures);
-      Downloads/player UI (loop 4); lint on this branch.
+- [ ] unverified now: audible real-speaker (human); real licensed catalogue (present is demo fixtures);
+      Downloads/player UI (loop 4); lint on this branch; independent QA + release candidate (loop 6).
 
 ## Loop 3 implementation notes (important for the next worker)
 - Media3 1.5.x: download classes live in `androidx.media3.exoplayer.offline` (NOT `.download`).
