@@ -66,8 +66,8 @@ class MainActivity : ComponentActivity() {
 
   override fun onStop() {
     super.onStop()
-    // Enforce YouTube Visible Player Policy: pause any embedded YouTube playback when backgrounded.
-    // Local audio continues playing inside LocalAudioPlaybackService.
+    // Defensive state reset for the removed YouTube embed feature.
+    // Local device audio continues in LocalAudioPlaybackService.
     router.onAppBackgrounded()
   }
 

@@ -1,7 +1,7 @@
 package com.shadowspark.morontomornica.model
 
 enum class PrimaryScreen(val title: String) {
-  DISCOVER_WATCH("Discover & Watch"),
+  DISCOVER_WATCH("Explore Videos"),
   MY_MUSIC("My Music"),
   CREATOR_HUB("Creator Hub"),
 }

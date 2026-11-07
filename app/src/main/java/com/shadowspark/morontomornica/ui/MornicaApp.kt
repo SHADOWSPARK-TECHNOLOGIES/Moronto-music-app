@@ -1,11 +1,7 @@
 package com.shadowspark.morontomornica.ui
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
-import android.webkit.WebChromeClient
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -106,7 +102,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import com.shadowspark.morontomornica.domain.LocalMediaRepository
 import com.shadowspark.morontomornica.domain.MornicaUiState
 import com.shadowspark.morontomornica.domain.PlaybackRouter
@@ -243,6 +238,8 @@ private fun MorontoTopHeader(
   onEqualizerClick: () -> Unit,
   onInfoClick: () -> Unit,
 ) {
+  var overflowExpanded by remember { mutableStateOf(false) }
+
   Surface(
     color = MornicaSlateHeader,
     modifier = Modifier.fillMaxWidth().statusBarsPadding(),
@@ -253,7 +250,6 @@ private fun MorontoTopHeader(
           Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
       ) {
         Row(
@@ -272,71 +268,83 @@ private fun MorontoTopHeader(
           ) {
             Icon(
               imageVector = Icons.Default.MusicNote,
-              contentDescription = "Moronto Music Emblem",
+              contentDescription = "Mornica Music Emblem",
               tint = MornicaEmerald,
               modifier = Modifier.size(22.dp),
             )
           }
-          Column {
+          Column(modifier = Modifier.weight(1f)) {
             Text(
-              text = "Moronto Music",
+              text = "Mornica Music",
               style = MaterialTheme.typography.titleLarge,
               fontWeight = FontWeight.ExtraBold,
               color = MornicaTextLight,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis,
             )
             Text(
               text = "by ShadowSpark Technologies ⚡",
               style = MaterialTheme.typography.labelMedium,
               color = MornicaCyan,
               fontWeight = FontWeight.SemiBold,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis,
             )
           }
         }
 
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-          IconButton(onClick = onAiDiscoveryClick) {
+        IconButton(onClick = onAiDiscoveryClick) {
+          Icon(
+            imageVector = Icons.Default.AutoAwesome,
+            contentDescription = "Explore official music videos",
+            tint = MornicaGoldSparkle,
+            modifier = Modifier.size(20.dp),
+          )
+        }
+        Box {
+          IconButton(onClick = { overflowExpanded = true }) {
             Icon(
-              imageVector = Icons.Default.AutoAwesome,
-              contentDescription = "AI & YouTube Discovery",
-              tint = MornicaGoldSparkle,
-              modifier = Modifier.size(20.dp),
-            )
-          }
-          IconButton(onClick = onEqualizerClick) {
-            Icon(
-              imageVector = Icons.Default.Timer,
-              contentDescription = "Playback Timer & Controls",
+              imageVector = Icons.Default.MoreVert,
+              contentDescription = "More music controls and information",
               tint = MornicaTextMuted,
-              modifier = Modifier.size(20.dp),
             )
           }
-          IconButton(onClick = onEqualizerClick) {
-            Icon(
-              imageVector = Icons.Default.Equalizer,
-              contentDescription = "Audio Equalizer & Now Playing",
-              tint = MornicaCyan,
-              modifier = Modifier.size(20.dp),
+          DropdownMenu(
+            expanded = overflowExpanded,
+            onDismissRequest = { overflowExpanded = false },
+          ) {
+            DropdownMenuItem(
+              text = { Text("Playback Timer & Controls") },
+              onClick = {
+                overflowExpanded = false
+                onEqualizerClick()
+              },
+              leadingIcon = {
+                Icon(Icons.Default.Timer, contentDescription = null)
+              },
             )
-          }
-          IconButton(onClick = onInfoClick) {
-            Box(
-              modifier =
-                Modifier
-                  .size(24.dp)
-                  .clip(CircleShape)
-                  .background(MornicaInfoBlue),
-              contentAlignment = Alignment.Center,
-            ) {
-              Icon(
-                imageVector = Icons.Default.Info,
-                contentDescription = "About & Rights Info",
-                tint = MornicaTextLight,
-                modifier = Modifier.size(16.dp),
-              )
-            }
+            DropdownMenuItem(
+              text = { Text("Audio Equalizer & Now Playing") },
+              onClick = {
+                overflowExpanded = false
+                onEqualizerClick()
+              },
+              leadingIcon = {
+                Icon(Icons.Default.Equalizer, contentDescription = null)
+              },
+            )
+            DropdownMenuItem(
+              text = { Text("About & Rights Info") },
+              onClick = {
+                overflowExpanded = false
+                onInfoClick()
+              },
+              leadingIcon = {
+                Icon(Icons.Default.Info, contentDescription = null)
+              },
+            )
           }
         }
       }
@@ -446,7 +454,7 @@ private fun MyMusicOfflineScreen(
             onValueChange = { router.updateLocalSearchQuery(it) },
             placeholder = {
               Text(
-                text = "Search title, artist, genre...",
+                text = "Find your next jam",
                 color = MornicaTextMuted,
                 style = MaterialTheme.typography.bodyMedium,
               )
@@ -560,13 +568,13 @@ private fun MyMusicOfflineScreen(
             ) {
               Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                 Text(
-                  text = "Bundled First-Party Synth Previews Active",
+                  text = "Your music, your way · No data? No wahala.",
                   style = MaterialTheme.typography.labelLarge,
                   fontWeight = FontWeight.Bold,
                   color = MornicaEmerald,
                 )
                 Text(
-                  text = "Tap Rescan or Grant Audio Access to load your phone's MP3, FLAC, and WAV folders.",
+                  text = "Play music already on your phone, even offline. Tap Scan Phone to find your audio files.",
                   style = MaterialTheme.typography.bodySmall,
                   color = MornicaTextMuted,
                 )
@@ -1245,7 +1253,6 @@ private fun NowPlayingFullSheet(
   }
 }
 
-@SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun DiscoverWatchScreen(
   uiState: MornicaUiState,
@@ -1266,7 +1273,7 @@ private fun DiscoverWatchScreen(
       ) {
         Column(modifier = Modifier.padding(14.dp)) {
           Text(
-            text = "Discover & Watch · Official YouTube Layer (Free & Unpaywalled)",
+            text = "Explore Naija sounds · Videos open on YouTube",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = MornicaEmerald,
@@ -1274,7 +1281,7 @@ private fun DiscoverWatchScreen(
           Spacer(modifier = Modifier.height(4.dp))
           Text(
             text =
-              "Seeded with third-party vidIQ Nigerian monthly YouTube search estimates (directional indicator only, never guaranteed demand). Videos play in a visible official YouTube embed or open directly in YouTube.",
+              "Explore official music videos from YouTube. Mornica never hides or downloads these videos. Your own music plays in My Music, even without data.",
             style = MaterialTheme.typography.bodySmall,
             color = MornicaTextMuted,
           )
@@ -1291,7 +1298,7 @@ private fun DiscoverWatchScreen(
         OutlinedTextField(
           value = searchText,
           onValueChange = { searchText = it },
-          label = { Text("Search Artist, Afrobeats or Amapiano") },
+          label = { Text("Find an artist or music video") },
           modifier = Modifier.weight(1f),
           singleLine = true,
           shape = RoundedCornerShape(14.dp),
@@ -1314,14 +1321,14 @@ private fun DiscoverWatchScreen(
         FilterChip(
           selected = uiState.searchQuery.equals("All", ignoreCase = true) && !uiState.risingCreatorsOnly,
           onClick = { router.updateSearchQuery("All", risingOnly = false) },
-          label = { Text("All African Hits") },
+          label = { Text("All videos") },
         )
         uiState.researchEstimates.forEach { est ->
           FilterChip(
             selected = uiState.searchQuery.equals(est.query, ignoreCase = true) && !uiState.risingCreatorsOnly,
             onClick = { router.updateSearchQuery(est.query, risingOnly = false) },
             label = {
-              Text("${est.query} (${est.monthlyNigerianSearches / 1000}K est.)")
+              Text(est.query)
             },
           )
         }
@@ -1330,57 +1337,6 @@ private fun DiscoverWatchScreen(
           onClick = { router.updateSearchQuery("All", risingOnly = !uiState.risingCreatorsOnly) },
           label = { Text("Rising Creators") },
         )
-      }
-    }
-
-    uiState.activeYouTubeVideo?.let { activeVideo ->
-      if (uiState.isYouTubeEmbedPlaying && uiState.isYouTubeViewportVisible) {
-        item {
-          Card(
-            colors = CardDefaults.cardColors(containerColor = MornicaSlateHeader),
-            shape = RoundedCornerShape(14.dp),
-            border = BorderStroke(1.dp, MornicaEmerald),
-          ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-              Text(
-                text = "VISIBLE OFFICIAL YOUTUBE PLAYER · ${activeVideo.title}",
-                style = MaterialTheme.typography.labelMedium,
-                color = MornicaAmberStart,
-                fontWeight = FontWeight.Bold,
-              )
-              Spacer(modifier = Modifier.height(8.dp))
-              AndroidView(
-                modifier = Modifier.fillMaxWidth().height(220.dp),
-                factory = { ctx ->
-                  WebView(ctx).apply {
-                    settings.javaScriptEnabled = true
-                    settings.mediaPlaybackRequiresUserGesture = false
-                    webChromeClient = WebChromeClient()
-                    webViewClient = WebViewClient()
-                    loadUrl(activeVideo.officialEmbedUrl())
-                  }
-                },
-                update = { webView ->
-                  if (webView.url != activeVideo.officialEmbedUrl()) {
-                    webView.loadUrl(activeVideo.officialEmbedUrl())
-                  }
-                },
-              )
-              Spacer(modifier = Modifier.height(8.dp))
-              Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-              ) {
-                TextButton(onClick = { onOpenExternalYouTube(activeVideo.officialWatchUrl()) }) {
-                  Text("Watch in Official YouTube App", color = MornicaCyan)
-                }
-                TextButton(onClick = { router.onYouTubeVisibilityChanged(false) }) {
-                  Text("Close Embed", color = MornicaEmerald)
-                }
-              }
-            }
-          }
-        }
       }
     }
 
@@ -1394,7 +1350,7 @@ private fun DiscoverWatchScreen(
         ) {
           Column(modifier = Modifier.padding(14.dp)) {
             Text(
-              text = "No Verified Official YouTube Videos in Local Cache",
+              text = "No videos found",
               style = MaterialTheme.typography.titleSmall,
               fontWeight = FontWeight.Bold,
               color = MornicaAmberStart,
@@ -1402,8 +1358,7 @@ private fun DiscoverWatchScreen(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
               text =
-                "Moronto Mornica never displays fabricated channels or placeholder video IDs. " +
-                  "Open YouTube directly to search '${uiState.searchQuery.ifBlank { "Afrobeats" }}'.",
+                "Open YouTube to look for '${uiState.searchQuery.ifBlank { "Afrobeats" }}'. Videos play outside Mornica.",
               style = MaterialTheme.typography.bodySmall,
               color = MornicaTextMuted,
             )
@@ -1412,7 +1367,7 @@ private fun DiscoverWatchScreen(
               onClick = { onOpenExternalYouTube(uiState.externalYouTubeSearchUrl) },
               colors = ButtonDefaults.buttonColors(containerColor = MornicaEmerald),
             ) {
-              Text("Search on Official YouTube", color = Color(0xFF04130E), fontWeight = FontWeight.Bold)
+              Text("Search on YouTube", color = Color(0xFF04130E), fontWeight = FontWeight.Bold)
             }
           }
         }
@@ -1421,7 +1376,6 @@ private fun DiscoverWatchScreen(
       items(uiState.youtubeVideos, key = { it.videoId }) { video ->
         YouTubeVideoItemCard(
           video = video,
-          onWatchEmbed = { router.startYouTubeEmbed(video, viewportWidthDp = 360, viewportHeightDp = 220) },
           onWatchExternal = { onOpenExternalYouTube(video.officialWatchUrl()) },
         )
       }
@@ -1432,7 +1386,6 @@ private fun DiscoverWatchScreen(
 @Composable
 private fun YouTubeVideoItemCard(
   video: YouTubeVideoCard,
-  onWatchEmbed: () -> Unit,
   onWatchExternal: () -> Unit,
 ) {
   Card(
@@ -1456,26 +1409,17 @@ private fun YouTubeVideoItemCard(
         color = MornicaTextLight,
       )
       Text(
-        text = "${video.channelTitle} · ${video.category} · Free Official Stream",
+        text = "${video.channelTitle} · ${video.category} · Opens in YouTube",
         style = MaterialTheme.typography.bodySmall,
         color = MornicaTextMuted,
       )
       Spacer(modifier = Modifier.height(10.dp))
-      Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(
-          onClick = onWatchEmbed,
-          colors = ButtonDefaults.buttonColors(containerColor = MornicaEmerald),
-          shape = RoundedCornerShape(10.dp),
-        ) {
-          Text("Watch Visible Embed", color = Color(0xFF04130E), fontWeight = FontWeight.Bold)
-        }
-        OutlinedButton(
-          onClick = onWatchExternal,
-          shape = RoundedCornerShape(10.dp),
-          border = BorderStroke(1.dp, MornicaSlateBorder),
-        ) {
-          Text("Open YouTube", color = MornicaCyan)
-        }
+      OutlinedButton(
+        onClick = onWatchExternal,
+        shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(1.dp, MornicaSlateBorder),
+      ) {
+        Text("Watch on YouTube", color = MornicaCyan)
       }
     }
   }
@@ -1653,16 +1597,16 @@ private fun CreatorHubScreen(
       ) {
         Column(modifier = Modifier.padding(14.dp)) {
           Text(
-            text = "Privacy, Data Safety & YouTube Policy Compliance",
+            text = "Your Music, Privacy & Sources",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = MornicaAmberStart,
           )
           Text(
             text =
-              "1. Local audio files (READ_MEDIA_AUDIO) are scanned strictly on-device and never uploaded. " +
-                "2. Official YouTube embeds remain visible, free, and pause automatically when backgrounded. " +
-                "3. Zero downloading, ripping, or stream extraction from YouTube is permitted.",
+              "Music on your phone stays on your device. Mornica shows clearly labeled YouTube links " +
+                "that open outside the app. Mornica never plays or downloads YouTube streams. " +
+                "Offline saves will only be available for tracks with confirmed download rights.",
             style = MaterialTheme.typography.bodySmall,
             color = MornicaTextMuted,
           )
