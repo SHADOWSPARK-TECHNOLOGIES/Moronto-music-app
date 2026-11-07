@@ -12,6 +12,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.shadowspark.morontomornica.MainActivity
@@ -80,6 +81,7 @@ data class MornicaUiState(
   // Domain D: Licensed streaming catalogue
   val catalogTracks: List<LicensedCatalogTrack> = emptyList(),
   val activeCatalogTrack: LicensedCatalogTrack? = null,
+  val catalogDownloadStates: Map<String, CatalogDownloadState> = emptyMap(),
   // Domain C: Creator Launch Hub
   val creatorProfiles: List<CreatorProfile> = emptyList(),
   val submittedLaunchRequests: List<ArtistLaunchRequest> = emptyList(),
@@ -92,6 +94,8 @@ class PlaybackRouter(
   private val licensedCatalogRepository: LicensedCatalogRepository = LicensedCatalogRepository(),
   private val catalogRights: LicensedCatalogRights = LicensedCatalogConfig.demoRights(),
   private val territoryProvider: () -> String = { "NG" },
+  private val catalogDownloadManager: CatalogDownloadManager? = null,
+  private val downloadStore: DownloadStore? = null,
   private val onLocalAudioCommand: ((LocalMediaTrack?, Boolean) -> Unit)? = null,
   private var localAudioController: LocalAudioController? = null,
 ) {
@@ -303,6 +307,41 @@ class PlaybackRouter(
     }
     return true
   }
+
+  /**
+   * Loop 3: request an authorized offline download. The fail-closed CatalogAccess gate
+   * (SAVE_OFFLINE) runs FIRST; only an ALLOW is enqueued and recorded. Denials surface a
+   * reason and never reach the downloader. A stream-only / expired / unverified /
+   * out-of-territory track is refused here.
+   */
+  fun requestCatalogDownload(track: LicensedCatalogTrack): Boolean {
+    val manager = catalogDownloadManager
+    if (manager == null) {
+      _state.update { it.copy(statusBannerMessage = "Offline downloads are not enabled yet.") }
+      return false
+    }
+    val decision = manager.enqueue(track)
+    if (!decision.allowed) {
+      _state.update {
+        it.copy(statusBannerMessage = catalogDenialMessage(decision.denial, track.title))
+      }
+      return false
+    }
+    val territory = territoryProvider()
+    downloadStore?.save(DownloadRecord.fromTrack(track, territory, System.currentTimeMillis()))
+    _state.update { current ->
+      current.copy(
+        catalogDownloadStates = current.catalogDownloadStates + (track.id to CatalogDownloadState.QUEUED),
+        statusBannerMessage =
+          "Download queued for offline: ${track.title} · ${track.sourceLabel}",
+      )
+    }
+    return true
+  }
+
+  /** Whether any downloaded bytes for this track may be played offline RIGHT NOW (fail-closed). */
+  fun offlinePlaybackAllowed(track: LicensedCatalogTrack): Boolean =
+    downloadStore?.get(track.id)?.mayPlayOffline(territoryProvider(), System.currentTimeMillis()) ?: false
 
   fun toggleLocalPlayPause() {
     val current = _state.value
@@ -955,6 +994,11 @@ class LocalAudioPlaybackService : MediaSessionService() {
       ExoPlayer.Builder(this)
         .setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
         .setHandleAudioBecomingNoisy(true)
+        // Playback reads/writes the SHARED cache (MediaCache) so fully-downloaded licensed
+        // tracks play correctly offline; network streams still fetch on demand through it.
+        .setMediaSourceFactory(
+          DefaultMediaSourceFactory(MediaCache.playbackDataSourceFactory(this)),
+        )
         .build()
     exoPlayer = player
 
