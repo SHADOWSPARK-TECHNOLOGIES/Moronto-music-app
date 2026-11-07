@@ -1,6 +1,7 @@
 package com.shadowspark.morontomornica
 
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
 import com.shadowspark.morontomornica.domain.LocalAudioController
 import com.shadowspark.morontomornica.domain.LocalAudioPlaybackService
 import com.shadowspark.morontomornica.domain.LocalMediaRepository
@@ -58,6 +59,13 @@ class MornicaAcceptanceTest {
       lastQueueIds = queue.map { it.id }
       this.currentRepeatMode = repeatMode
       this.isShuffleOn = shuffleEnabled
+      this.isPlayingState = true
+      this.lastSeekPositionMs = 0L
+    }
+
+    override fun playMediaItems(items: List<MediaItem>, startIndex: Int) {
+      lastPlayedTrack = null
+      lastQueueIds = items.map { it.mediaId }
       this.isPlayingState = true
       this.lastSeekPositionMs = 0L
     }

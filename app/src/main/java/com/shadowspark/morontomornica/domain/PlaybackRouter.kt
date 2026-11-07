@@ -39,6 +39,7 @@ interface LocalAudioController {
     repeatMode: RepeatMode,
     shuffleEnabled: Boolean,
   )
+  fun playMediaItems(items: List<MediaItem>, startIndex: Int = 0)
   fun setPlayWhenReady(playWhenReady: Boolean)
   fun seekTo(positionMs: Long)
   fun setShuffleEnabled(shuffleEnabled: Boolean)
@@ -76,6 +77,9 @@ data class MornicaUiState(
   val favoriteTrackIds: Set<String> = emptySet(),
   val playlists: Map<String, List<String>> =
     mapOf("Afrobeats Offline Queue" to listOf("demo-lagos-pulse", "demo-lekki-logdrum")),
+  // Domain D: Licensed streaming catalogue
+  val catalogTracks: List<LicensedCatalogTrack> = emptyList(),
+  val activeCatalogTrack: LicensedCatalogTrack? = null,
   // Domain C: Creator Launch Hub
   val creatorProfiles: List<CreatorProfile> = emptyList(),
   val submittedLaunchRequests: List<ArtistLaunchRequest> = emptyList(),
@@ -85,12 +89,16 @@ data class MornicaUiState(
 class PlaybackRouter(
   private val youtubeRepository: YouTubeDiscoveryRepository = YouTubeDiscoveryRepository(),
   private val localMediaRepository: LocalMediaRepository = LocalMediaRepository(),
+  private val licensedCatalogRepository: LicensedCatalogRepository = LicensedCatalogRepository(),
+  private val catalogRights: LicensedCatalogRights = LicensedCatalogConfig.demoRights(),
+  private val territoryProvider: () -> String = { "NG" },
   private val onLocalAudioCommand: ((LocalMediaTrack?, Boolean) -> Unit)? = null,
   private var localAudioController: LocalAudioController? = null,
 ) {
   companion object {
     const val MIN_YOUTUBE_VIEWPORT_DP: Int = 200
     const val RESTART_TRACK_THRESHOLD_MS: Long = 3_000L
+    const val CATALOG_MEDIA_ID_PREFIX: String = "catalog:"
   }
 
   private val _state = MutableStateFlow(MornicaUiState())
@@ -99,6 +107,7 @@ class PlaybackRouter(
   init {
     val initialVideos = youtubeRepository.searchOfficialVideos("Asake", risingCreatorsOnly = false)
     val initialTracks = localMediaRepository.defaultDemoAndCatalogTracks()
+    val initialCatalog = licensedCatalogRepository.demoCatalog()
     val playableIds = initialTracks.filter { it.isPlayableOffline() }.map { it.id }
     _state.value =
       MornicaUiState(
@@ -107,6 +116,7 @@ class PlaybackRouter(
         externalYouTubeSearchUrl = youtubeRepository.buildExternalSearchUrl("Asake"),
         localTracks = initialTracks,
         queueTrackIds = playableIds,
+        catalogTracks = initialCatalog,
         creatorProfiles = localMediaRepository.verifiedCreatorProfiles(),
       )
     localAudioController?.bindRouter(this)
@@ -251,6 +261,44 @@ class PlaybackRouter(
         isYouTubeEmbedPlaying = false,
         activeYouTubeVideo = null,
         statusBannerMessage = "Playing offline audio: ${track.title} (${track.provenance.label})",
+      )
+    }
+    return true
+  }
+
+  /**
+   * Domain D / Loop 2: starts a licensed catalogue track over the network through the
+   * SAME native Media3 player. The fail-closed CatalogAccess gate runs FIRST; only an
+   * ALLOW (rights confirmed, in-territory, unexpired, stream-authorized, host-approved)
+   * forwards a MediaItem to the player. Any denial surfaces a reason and never reaches
+   * the player. YouTube hosts are hard-blocked by the gate.
+   */
+  fun playCatalogTrack(track: LicensedCatalogTrack): Boolean {
+    val territory = territoryProvider()
+    val decision = catalogRights.evaluate(track, CatalogAccess.STREAM, territory)
+    if (!decision.allowed) {
+      _state.update {
+        it.copy(
+          statusBannerMessage = catalogDenialMessage(decision.denial, track.title),
+        )
+      }
+      return false
+    }
+    onLocalAudioCommand?.invoke(null, true)
+    localAudioController?.playMediaItems(listOf(track.toMedia3Item()), startIndex = 0)
+    _state.update {
+      it.copy(
+        activeEngine = ActiveEngine.LICENSED_CATALOG,
+        activeCatalogTrack = track,
+        activeLocalTrack = null,
+        // isLocalPlaying is NOT set optimistically here: it flips true only when the
+        // Media3 controller confirms the player actually reached a playing state.
+        localPositionMs = 0L,
+        playbackError = null,
+        isYouTubeEmbedPlaying = false,
+        activeYouTubeVideo = null,
+        statusBannerMessage =
+          "Streaming licensed demo: ${track.title} · ${track.sourceLabel}",
       )
     }
     return true
@@ -413,11 +461,14 @@ class PlaybackRouter(
 
   fun onPlayerIsPlayingChanged(isPlaying: Boolean) {
     _state.update { current ->
-      if (current.activeLocalTrack == null) {
+      if (current.activeLocalTrack == null && current.activeCatalogTrack == null) {
         current
       } else {
+        val engine =
+          if (current.activeCatalogTrack != null) ActiveEngine.LICENSED_CATALOG
+          else ActiveEngine.LOCAL_AUDIO
         current.copy(
-          activeEngine = if (isPlaying) ActiveEngine.LOCAL_AUDIO else current.activeEngine,
+          activeEngine = if (isPlaying) engine else current.activeEngine,
           isLocalPlaying = isPlaying,
           isYouTubeEmbedPlaying = if (isPlaying) false else current.isYouTubeEmbedPlaying,
         )
@@ -427,6 +478,20 @@ class PlaybackRouter(
 
   fun onMediaTrackTransitioned(trackId: String?, positionMs: Long = 0L) {
     if (trackId.isNullOrBlank()) return
+    if (trackId.startsWith(CATALOG_MEDIA_ID_PREFIX)) {
+      val catalogId = trackId.removePrefix(CATALOG_MEDIA_ID_PREFIX)
+      val track = _state.value.catalogTracks.find { it.id == catalogId } ?: return
+      _state.update { current ->
+        current.copy(
+          activeEngine = ActiveEngine.LICENSED_CATALOG,
+          activeCatalogTrack = track,
+          activeLocalTrack = null,
+          localPositionMs = positionMs.coerceAtLeast(0L),
+          playbackError = null,
+        )
+      }
+      return
+    }
     val track = _state.value.localTracks.find { it.id == trackId } ?: return
     if (!track.isPlayableOffline()) return
     _state.update { current ->
@@ -596,6 +661,27 @@ class PlaybackRouter(
     return true
   }
 
+  private fun catalogDenialMessage(denial: CatalogDenial, title: String): String =
+    when (denial) {
+      CatalogDenial.NONE -> "Streaming ${title}."
+      CatalogDenial.INVALID_SOURCE ->
+        "Blocked: '${title}' uses an unapproved or unrecognized media source and cannot stream."
+      CatalogDenial.MISSING_LICENSE ->
+        "Unavailable: '${title}' has incomplete license metadata and cannot stream."
+      CatalogDenial.UNVERIFIED_RIGHTS ->
+        "Unavailable: rights for '${title}' have not been verified and cannot stream."
+      CatalogDenial.TERRITORY_UNAVAILABLE ->
+        "Not available in your region: '${title}' is restricted to specific territories."
+      CatalogDenial.LICENSE_EXPIRED ->
+        "Expired: the streaming license for '${title}' is no longer valid."
+      CatalogDenial.STREAM_NOT_AUTHORIZED ->
+        "Not authorized: '${title}' has no streaming entitlement."
+      CatalogDenial.OFFLINE_NOT_AUTHORIZED ->
+        "Not authorized: offline playback of '${title}' is not permitted."
+      CatalogDenial.DOWNLOAD_INCOMPLETE ->
+        "Not ready: '${title}' has finished streaming but no offline download is available."
+    }
+
   private fun resolveActivePlayableQueue(current: MornicaUiState): List<LocalMediaTrack> {
     val playableById = current.localTracks.filter { it.isPlayableOffline() }.associateBy { it.id }
     val fromQueueIds = current.queueTrackIds.mapNotNull { playableById[it] }
@@ -646,6 +732,19 @@ fun LocalMediaTrack.toMedia3Item(): MediaItem =
         .setTitle(title)
         .setArtist(artist)
         .setAlbumTitle(album)
+        .build(),
+    )
+    .build()
+
+fun LicensedCatalogTrack.toMedia3Item(): MediaItem =
+  MediaItem.Builder()
+    .setMediaId("${PlaybackRouter.CATALOG_MEDIA_ID_PREFIX}$id")
+    .setUri(Uri.parse(mediaUrl))
+    .setMediaMetadata(
+      MediaMetadata.Builder()
+        .setTitle(title)
+        .setArtist(artist)
+        .setAlbumTitle(sourceLabel)
         .build(),
     )
     .build()
@@ -747,6 +846,28 @@ class Media3LocalAudioController(
     player.repeatMode = repeatMode.toMedia3RepeatMode()
     player.shuffleModeEnabled = shuffleEnabled
     player.setMediaItems(items, startIndex, 0L)
+    player.prepare()
+    player.playWhenReady = true
+  }
+
+  /**
+   * Domain D / Loop 2: plays pre-authorized remote (licensed catalogue) MediaItems on
+   * the same native player. The router's CatalogAccess gate runs before this is called;
+   * this layer only re-checks that no YouTube URI can reach the player (defense in
+   * depth for the background service boundary).
+   */
+  override fun playMediaItems(items: List<MediaItem>, startIndex: Int) {
+    val safe = items.filterNot { item ->
+      LocalMediaTrack.isYouTubeUri(item.localConfiguration?.uri?.toString().orEmpty())
+    }
+    if (safe.size != items.size) {
+      player.stop()
+      player.clearMediaItems()
+      boundRouter?.onPlayerError("Blocked YouTube URI attempted to reach the native Media3 player.")
+      return
+    }
+    val targetStart = startIndex.coerceIn(0, safe.size - 1)
+    player.setMediaItems(safe, targetStart, 0L)
     player.prepare()
     player.playWhenReady = true
   }

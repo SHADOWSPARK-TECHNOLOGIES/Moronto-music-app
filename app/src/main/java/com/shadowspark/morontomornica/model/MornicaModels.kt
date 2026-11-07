@@ -10,6 +10,7 @@ enum class ActiveEngine {
   NONE,
   YOUTUBE_EMBED,
   LOCAL_AUDIO,
+  LICENSED_CATALOG,
 }
 
 enum class YouTubeSourceBadge(val label: String) {

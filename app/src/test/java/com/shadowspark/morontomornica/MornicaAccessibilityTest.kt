@@ -25,6 +25,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
+import androidx.media3.common.MediaItem
 import com.shadowspark.morontomornica.domain.LocalAudioController
 import com.shadowspark.morontomornica.domain.LocalMediaRepository
 import com.shadowspark.morontomornica.domain.PlaybackRouter
@@ -55,6 +56,7 @@ class MornicaAccessibilityTest {
       repeatMode: RepeatMode,
       shuffleEnabled: Boolean,
     ) = Unit
+    override fun playMediaItems(items: List<MediaItem>, startIndex: Int) = Unit
     override fun setPlayWhenReady(playWhenReady: Boolean) = Unit
     override fun seekTo(positionMs: Long) { lastSeekMs = positionMs }
     override fun setShuffleEnabled(shuffleEnabled: Boolean) = Unit
