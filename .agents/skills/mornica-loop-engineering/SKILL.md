@@ -10,16 +10,17 @@ Apply for all Hermes/Antigravity Moronto Mornica implementation, repair, verific
 
 ## Mandatory first read
 1. docs/agent-loop/HERMES_EXECUTION_CONTRACT_2026-11-07.md
-2. docs/PRODUCT_SPEC.md and app/build.gradle.kts
-3. docs/agent-loop/{objective,status,evidence}.md on the header candidate branch
-4. git status / branch / worktree / origin read-only audit before edits
+2. docs/agent-loop/MORNICA_NIGERIA_FIRST_STREAMING_OFFLINE_SPEC.md (newer product direction)
+3. docs/PRODUCT_SPEC.md and app/build.gradle.kts
+4. docs/agent-loop/{objective,status,evidence}.md on the header candidate branch
+5. git status / branch / worktree / origin read-only audit before edits
 
 ## One bounded objective per cycle
-**OBSERVE**: Identity, current evidence, dirty-state inventory, smallest reproduced defect, policy/privacy impact.
+**OBSERVE**: Identity, current evidence, dirty-state inventory, smallest reproduced defect, music rights/stream/download entitlement, policy/privacy impact.
 **PLAN**: Exact user-visible outcome, acceptance criteria, allowed files, tests and rollback. Separate already-implemented from proposed.
 **SCOUT**: Read existing implementation, diagnose architecture/CI, report hypotheses as hypotheses.
 **BUILD**: Change the minimum in a clean isolated worktree, only one objective. No more than two independent nonoverlapping writers.
-**VERIFY**: Separate agent inspects diff and runs repeatable tests. At minimum Gradle :app:testDebugUnitTest, :app:lintDebug, :app:assembleDebug and safe emulator checks appropriate to change.
+**VERIFY**: Separate agent inspects diff and runs repeatable tests. At minimum Gradle :app:testDebugUnitTest, :app:lintDebug, :app:assembleDebug and safe emulator checks appropriate to change. Download features need a licensed-stream-to-airplane-mode playback test, and rejection of non-offline-licensed tracks.
 **GATE**: PASS only if verified; FAIL if acceptance failed; BLOCKED if missing source/SDK/log/evidence/credentials/approval.
 **REFLECT**: Capture root cause, evidence, lesson, current branch/HEAD, next smallest objective. No unbounded autonomous retries.
 
@@ -42,7 +43,7 @@ Return this per-objective report:
 | Artifact | output APK path + SHA-256 when built |
 | UI/device | emulator identity, screenshot provenance, player/nav interactions when needed |
 | Independent QA | reviewer findings and whether implemented fixes were rechecked |
-| Safety | media separation, rights, secrets, Play/install/release untouched |
+| Safety | media separation, rights, licensed streaming/offline-only, no YouTube embedded/hidden/downloaded media, secrets and Play/install/release untouched |
 | Next | one objective, cost/time spent if observed, explicit approval needed |
 
 ## Forbidden acceptance shortcuts
@@ -51,4 +52,4 @@ An APK build alone does not prove audio playback. Screenshot capture alone does 
 ## Helpful command
 On the correct, already-clean isolated Android worktree: bash scripts/hermes-mornica-verify.sh
 
-Use existing repo-declared Gradle wrapper and toolchain. Never switch to web/Next.js even when an older Antigravity prompt suggests it.
+Use existing repo-declared Gradle wrapper and toolchain. Never switch to web/Next.js even when an older Antigravity prompt suggests it. Prioritize a Mornica-native Media3 player with Nigerian-friendly copy. The app must not disguise YouTube playback or use Snaptube-like stream extraction. Optional YouTube video links are clearly labeled and external.
