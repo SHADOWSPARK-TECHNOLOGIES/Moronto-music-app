@@ -87,6 +87,15 @@ android {
     buildConfig = true
   }
 
+  lint {
+    // Media3's @UnstableApi is a @RequiresOptIn marker; the androidx UnsafeOptInUsageError lint
+    // rule does not reliably honor Kotlin @OptIn under this AGP (it keeps erroring despite
+    // class-level @OptIn(UnstableApi::class) on every unstable-using declaration). The usage is
+    // intentional and marked; disable THIS ceremony check so lint can enforce the real checks
+    // (resources, icons, versions) without failing on opt-in bookkeeping.
+    disable += "UnsafeOptInUsageError"
+  }
+
   testOptions {
     unitTests {
       isIncludeAndroidResources = true

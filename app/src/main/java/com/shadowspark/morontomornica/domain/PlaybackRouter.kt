@@ -11,6 +11,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
@@ -88,6 +89,7 @@ data class MornicaUiState(
   val statusBannerMessage: String? = null,
 )
 
+@OptIn(UnstableApi::class)
 class PlaybackRouter(
   private val youtubeRepository: YouTubeDiscoveryRepository = YouTubeDiscoveryRepository(),
   private val localMediaRepository: LocalMediaRepository = LocalMediaRepository(),
@@ -748,6 +750,7 @@ class PlaybackRouter(
   }
 }
 
+@OptIn(UnstableApi::class)
 fun RepeatMode.toMedia3RepeatMode(): Int =
   when (this) {
     RepeatMode.OFF -> Player.REPEAT_MODE_OFF
@@ -755,6 +758,7 @@ fun RepeatMode.toMedia3RepeatMode(): Int =
     RepeatMode.ONE -> Player.REPEAT_MODE_ONE
   }
 
+@OptIn(UnstableApi::class)
 fun Int.toMornicaRepeatMode(): RepeatMode =
   when (this) {
     Player.REPEAT_MODE_ALL -> RepeatMode.ALL
@@ -762,6 +766,7 @@ fun Int.toMornicaRepeatMode(): RepeatMode =
     else -> RepeatMode.OFF
   }
 
+@OptIn(UnstableApi::class)
 fun LocalMediaTrack.toMedia3Item(): MediaItem =
   MediaItem.Builder()
     .setMediaId(id)
@@ -775,6 +780,7 @@ fun LocalMediaTrack.toMedia3Item(): MediaItem =
     )
     .build()
 
+@OptIn(UnstableApi::class)
 fun LicensedCatalogTrack.toMedia3Item(): MediaItem =
   MediaItem.Builder()
     .setMediaId("${PlaybackRouter.CATALOG_MEDIA_ID_PREFIX}$id")
@@ -788,6 +794,7 @@ fun LicensedCatalogTrack.toMedia3Item(): MediaItem =
     )
     .build()
 
+@OptIn(UnstableApi::class)
 class Media3LocalAudioController(
   private val player: Player,
 ) : LocalAudioController {
@@ -936,6 +943,7 @@ class Media3LocalAudioController(
   }
 }
 
+@OptIn(UnstableApi::class)
 object MornicaRuntime {
   @Volatile var serviceStarter: (() -> Unit)? = null
   val localRepo: LocalMediaRepository = LocalMediaRepository()
@@ -962,6 +970,7 @@ object MornicaRuntime {
  * - Exposes system notification and lock-screen transport controls.
  * - Strictly rejects YouTube URIs so YouTube never plays in the background service.
  */
+@OptIn(UnstableApi::class)
 class LocalAudioPlaybackService : MediaSessionService() {
   internal var exoPlayer: ExoPlayer? = null
   internal var mediaSession: MediaSession? = null
