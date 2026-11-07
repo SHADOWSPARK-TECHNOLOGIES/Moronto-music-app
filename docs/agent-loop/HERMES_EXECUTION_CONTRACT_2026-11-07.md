@@ -16,11 +16,19 @@
 - Read app/build.gradle.kts, app/src/main/AndroidManifest.xml, docs/PRODUCT_SPEC.md, docs/agent-loop/{objective,status,evidence}.md and AGENTS.md. If AGENTS.md or an older runbook proposes a web application, follow the native Android build and PRODUCT_SPEC for Mornica; log any contradiction.
 - The original owner development worktree may contain newer, uncommitted app changes. Preserve them in place. The agent MUST NOT reset, stash, clean, force-push, overwrite, cherry-pick into, or modify it without review.
 
+## 1A. Product decision superseding older YouTube-embed instructions (2026-11-07)
+- Read `docs/agent-loop/MORNICA_NIGERIA_FIRST_STREAMING_OFFLINE_SPEC.md` as the authoritative current product direction.
+- **One native Mornica-branded audio player** supports user-owned files, directly licensed streams and explicitly licensed offline downloads. No embedded YouTube playback in Mornica. Do not create fake Mornica playback backed by hidden YouTube streams.
+- Optional discovery of YouTube videos means a clearly labeled `Watch on YouTube` external intent, not in-app playback. Do not include YouTube API services in the first Mornica release without an explicit separately reviewed feature decision. If enabled in the future, follow source attribution, APIs, privacy and brand rules; Terms-only disclosure is insufficient.
+- Stream/download rights are not interchangeable. Implement downloads only from sources explicitly licensed for offline saves, never Snaptube-style YouTube stream extraction. Copy and UI must reflect entitlement availability.
+- Nigerian-first localization: simple English with optional naturally phrased Naija/Pidgin variant. Favor understandable labels such as `Find your next jam`, `Save for offline`, `Downloads`, `No data? No wahala.`, and `Wi-Fi downloads only`; do not falsely advertise universal song downloads.
+- When this decision conflicts with older `docs/PRODUCT_SPEC.md`, `AGENTS.md` or `docs/ANTIGRAVITY_RUNBOOK.md`, prioritize this newer release contract and log the inconsistency. Do not overwrite source implementation blindly.
+
 ## 2. Immutable media, rights and safety requirements
-1. Local and rights-cleared audio: MediaStore and Media3/ExoPlayer. Local files may play offline and in the background via a foreground MediaSessionService. Honor audio focus, noisy/headset disconnect, system controls, playback lifecycle, playlists, seek bounds, shuffle/repeat and persistent state where genuinely implemented.
-2. YouTube: discovery metadata via official APIs and playback ONLY through visible official IFrame/WebView or clear external watch link. Pause when backgrounded/screen off. No audio extraction, download, caching of streams, headless background playback, hidden players, ad bypass, undocumented playback URLs, or paywalling official YouTube playback.
-3. Engine arbitration: opening YouTube pauses local music; starting local music pauses/collapses embedded YouTube. No YouTube video ID can enter a Media3 local-track URI.
-4. Metadata cache bounded to <=24 hours; fallback if quota/key unavailable; no hardcoded secrets or false claims that offline fallback is live API.
+1. Local and rights-cleared audio: MediaStore and Media3/ExoPlayer. User-owned local files and licensed Mornica catalog songs may play offline and in the background via a foreground MediaSessionService when authorized. Honor audio focus, noisy/headset disconnect, system controls, playback lifecycle, playlists, seek bounds, shuffle/repeat and persistent state where genuinely implemented.
+2. YouTube: no embedded player, hidden player, YouTube-proxied Media3 audio, downloaded/cached streams, stream extraction, undocumented playback URLs or background YouTube audio. If a source has an optional video link, show an explicitly labeled external `Watch on YouTube` action opening YouTube or a browser; no YouTube API use without a distinct, compliant feature review.
+3. Source isolation: the native player accepts MediaStore, licensed HTTPS catalog tracks and rights-authorized cached downloads only. External YouTube links leave the Mornica playback service and do not transfer video IDs, stream endpoints or extracted media into Media3.
+4. Catalog: rights and source metadata must record streamAllowed/offlineAllowed, territory, expiry and origin. Fail closed for unknown licenses. Use an offline index/download cache only for permitted tracks; no hardcoded secrets, YouTube metadata dependency or fake claims of catalog availability.
 5. Creator Hub: honest demo and rights-attested independent artist profiles. User-initiated commercial inquiry only; no fabricated verified profiles, partnerships, receipt, payment, or consent. Do not enable payments without a separate approved design, compliance review and live test.
 6. No unlicensed audio, copied private user data, unauthorized account access, or exposure of signing keys and API credentials. Keep passwords/keys off GitHub and out of logs.
 
@@ -50,13 +58,16 @@
 - Validate playback controls, persist queue/favorites/playlists where required by PRODUCT_SPEC, audio focus, headset unplug, interruptions, background, lock screen, recovery and no duplicate players.
 - Exit: unit/component tests plus isolated emulator/consented device evidence for all critical transitions; no local track URI contains a YouTube URL.
 
-### Loop 3: Discover & Watch integration
-- Test official metadata search, clear fallback, API quota error and bounded cache. Check embedded player visible >=200dp, native controls preserved, background/leave-screen pause, blocked-embed external watch fallback.
-- Exit: automated engine-isolation/arbitration and lifecycle tests plus evidence of foreground-only behavior. Absolutely no stream extraction.
+### Loop 3: Native streaming, licensed offline downloads and optional external discovery
+- Implement or verify a real licensed catalog (or clearly marked rights-cleared demo fixtures) with rights metadata and a genuine native Mornica player.
+- Build Android Media3 DownloadManager, DownloadService, DownloadIndex and CacheDataSource only for tracks licensed for offline use. Include Wi-Fi preference, progress, pause/resume/cancel/retry, storage handling, license expiry, connectivity interruptions and accurate Downloaded status.
+- Test streamAllowed/offlineAllowed enforcement, attribution, territory, authorization and airplane-mode playback with **no streaming fallback**. No fake-download button.
+- Optional YouTube link is externally launched and explicitly labeled. No embedded player, YouTube media ingestion, cached YouTube video/audio, YouTube background playback or stream extraction.
+- Exit: demonstrated authorized stream-to-offline journey, correct blocked behavior for non-downloadable tracks, independent permissions/rights checks and no YouTube source in Media3.
 
-### Loop 4: Creator Hub and commercial pilot
-- Implement/verify truthful creator cards, rights attestations, visible DEMO status, opt-in contact intake with validation, explicit consent and data-handling notes.
-- Exit: no fake feature/button/verification, no automatic outreach or payment; privacy/rights evidence and consent checks.
+### Loop 4: Creator Hub and Nigerian-first listening experience
+- Implement/verify truthful creator cards, rights attestations, visible DEMO status, opt-in contact intake with validation, explicit consent and data-handling notes. Include simple Nigerian-friendly strings for Home, Search, Player, Downloads, low-data/airplane mode and licensing exceptions.
+- Exit: no fake feature/button/verification, no automatic outreach or payment; copy accessibility/localization reviewed on 360dp/412dp screens, privacy/rights evidence and consent checks.
 
 ### Loop 5: Product quality, performance and reliability
 - Sweep UX across 360dp/412dp, font scale, dark mode, permission rejection, no connectivity, empty library, repeated rotations, audio interruptions and navigation.
@@ -82,8 +93,8 @@
 | Tests | test counts, failed tests, XML report paths, coverage only if measured |
 | Lint/accessibility | lint report and screenshots/semantics/TalkBack results if actually tested |
 | Playback | local foreground/background, noisy, seek, repeat/shuffle, permissions, queue integrity |
-| YouTube | official visible embed, lifecycle pause, metadata quota fallback, no extraction |
-| Creator/business | demo rights, user consent, truthful lead capture, no unauthorized payments |
+| Sources & external video | all Mornica player URLs owned/licensed; clearly labeled external YouTube intents only; no YouTube embeds, audio extraction, downloads or hidden playback |
+| Native stream/download | catalog license and entitlement, progress/retry, Wi-Fi choice, offline full-play airplane-mode test, download denial for non-licensed tracks |\n| Creator/business | demo rights, user consent, truthful lead capture, no unauthorized payments |
 | Changes | diff, reviewer identity, clean status, no secrets or unreviewed conflicts |
 | Release gate | explicit owner authorization required; production status unchanged |
 
@@ -91,7 +102,7 @@
 At the end of EVERY loop return EXACTLY: Objective; Status (PASS/FAIL/BLOCKED); Repo/Worktree/Branch/HEAD; pre-existing dirty files; changed files and diff summary; commands and exact results; tests and artifact paths/hash; independent review verdict; risks/unknowns; next smallest action; human approval needed. Record cost, elapsed effort and attempts used if known. Do not claim tests ran if they did not.
 
 ## 7. Launch order
-1. Read this contract and .agents/skills/mornica-loop-engineering/SKILL.md.
+1. Read this contract, the Nigeria-first streaming/offline spec and .agents/skills/mornica-loop-engineering/SKILL.md.
 2. Execute the kickoff instructions in docs/agent-loop/HERMES_KICKOFF.md in read-only mode.
 3. Stop and report if no authenticated access to the actual Android repository / SDK / emulator; do not infer from stale notes.
 4. For clean isolated worktrees only, run bash scripts/hermes-mornica-verify.sh for a real verified test/lint/build report.
