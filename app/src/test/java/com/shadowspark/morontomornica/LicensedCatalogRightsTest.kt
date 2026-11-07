@@ -91,6 +91,7 @@ class LicensedCatalogRightsTest {
       "https://user:pass@media.mornica.example/audio.mp3",
       "https://media.mornica.example:1234/audio.mp3",
       "javascript:alert(1)",
+      "https://bad host/audio.mp3",
     )
     banned.forEach { url ->
       assertFalse("Unexpected trusted media URL: $url", gate.isTrustedHttpsMediaUrl(url))
