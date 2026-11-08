@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500" role="img" aria-label="Original Mornica waveform backdrop">
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#071321"/><stop offset="1" stop-color="#0B1727"/></linearGradient>
+ <linearGradient id="a" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#12D9A1"/><stop offset=".52" stop-color="#20B6EB"/><stop offset="1" stop-color="#FF6479"/></linearGradient>
+</defs>
+<rect width="1200" height="500" fill="url(#bg)"/>
+<g fill="none" stroke="url(#a)" stroke-linecap="round">
+ <path d="M-30 315 C145 95 270 453 462 283 S767 58 948 252 S1140 389 1230 166" stroke-width="24" opacity=".83"/>
+ <path d="M-30 345 C145 125 270 483 462 313 S767 88 948 282 S1140 419 1230 196" stroke-width="8" opacity=".55"/>
+ <path d="M-30 375 C145 155 270 513 462 343 S767 118 948 312 S1140 449 1230 226" stroke-width="4" opacity=".4"/>
+</g>
+<g fill="#12D9A1" opacity=".5"><circle cx="110" cy="93" r="5"/><circle cx="165" cy="105" r="3"/><circle cx="1033" cy="72" r="4"/><circle cx="1075" cy="98" r="3"/></g>
+<path d="M890 70 L902 96 L928 108 L902 120 L890 146 L878 120 L852 108 L878 96Z" fill="#FFBE55"/>
+</svg>
