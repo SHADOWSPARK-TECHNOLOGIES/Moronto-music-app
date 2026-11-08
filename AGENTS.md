@@ -40,3 +40,12 @@ Hermes and any other agent before editing.
   self-asserted success; no unlimited retries.
 - Preserve evidence in `docs/EXECUTION_LOG.md` and decisions in `docs/decisions.md` (agent loop
   state in `docs/agent-loop/STATE.md`).
+
+## Antigravity original-design sprint (2026-11-08)
+When Antigravity is assigned UI/UX or test-release work, first read:
+- `docs/antigravity/MORNICA_DESIGN_TEST_RELEASE_CONTRACT_20261108.md`
+- `docs/antigravity/KICKOFF_20261108.md`
+- `docs/brand/MORNICA_BRAND_SYSTEM.md`
+- `.agents/skills/mornica-antigravity-ui-release-loop/SKILL.md`
+
+This is a **time-boxed internal test candidate**, not automatic store publication. Apple's public Music UX can inform general navigation/music workflows, but do not copy Apple branding/assets/screens as a near-clone. REA may be used on our Mornica app or for lawful first-party-visible UI observation only, not Apple binaries/DRM/private APIs. Preserve Hermes's active worktrees and existing Media3 rights gate; no external release, merge or signing change without explicit owner approval. If this section conflicts with protected media policy elsewhere in AGENTS.md, the stricter rule wins.
