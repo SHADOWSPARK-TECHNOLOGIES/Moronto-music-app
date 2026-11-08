@@ -5,37 +5,56 @@ proof (branch, SHA, passing command output), mark it stale — a note is not evi
 
 ## Active loop
 Nigeria-first streaming/offline plan: 1 = access policy (done) · 2 = native Media3 online playback
-(done) · 3 = offline downloads (loop 3 DONE: download side; offline-PLAYBACK device proof PENDING — see ledger) ·
-4 = player + Downloads UI (NEXT) · 5 = airplane-mode & background testing · 6 = independent QA +
-release candidate (no publish without owner approval).
+(done) · 3 = offline downloads (DONE, incl. offline-PLAYBACK device proof via FLAG_BLOCK_ON_CACHE,
+merged to main) · 4 = player + Downloads UI (DONE as code+unit; rendered pixels UNVERIFIED) ·
+5 = airplane-mode & background testing · 6 = independent QA + release candidate (no publish without
+owner approval).
 Authoritative spec: `docs/agent-loop/MORNICA_NIGERIA_FIRST_STREAMING_OFFLINE_SPEC.md`.
 
 ## Last verified state (2026-11-07)
-- Local branch (NOT pushed, no upstream): `agent/mornica-gate-consolidation-20261107`
-- Stack: hermes-execution base → PR #10 commits → merge of PR #9 → `dd4619a` gate consolidation →
-  `7c591c5` loop 2 → `17833fc` execution contracts + CatalogSource seam → the Loop-3 commit (offline
-  downloads). See `git log --oneline` for the exact loop-3 SHA.
-- Working tree: clean (consolidation worktree `/home/moronto/.hermes/cache/scratch/mornica-wt-consolidate`)
+- `main` = `7c6ade8` — PRs #11, #12, #13 MERGED (gate+playback, offline-proof, lint config).
+- Loop 4 work lives on branch `agent/mornica-loop4-catalog-ui-20261107` (DRAFT PR to main), based on
+  the post-merge consolidation branch `agent/mornica-gate-consolidation-20261107`.
+- Working tree: clean. Consolidation worktree
+  `/home/moronto/.hermes/cache/scratch/mornica-wt-consolidate` (authoritative; sdk.dir set).
 - Repo: SHADOWSPARK-TECHNOLOGIES/Moronto-music-app (remote origin). Owner's checkout is
-  `/home/moronto/StudioProjects/Moronto-music-app` (on the old antigravity branch; DO NOT disturb).
+  `/home/moronto/StudioProjects/Moronto-music-app` (old antigravity branch; DO NOT disturb).
 
-## Verification ledger (as of loop 3)
-- [x] unit-verified: `:app:testDebugUnitTest` 47/47 (gate 7, playback 7, catalog-download 8,
-      download-store 6, acceptance 12, accessibility 7)
-- [x] device-verified: `connectedDebugAndroidTest` 2/2 on API 37 x86_64 emulator:
-      CatalogDownloadInstrumentedTest (authorized demo track → DownloadManager COMPLETED; stream-only
-      refused, never in index) AND CatalogOfflinePlaybackInstrumentedTest (download → full bytes durably
-      in the Media3 cache keyed by URI → OFFLINE PLAYBACK proven: reached a playing state with
-      FLAG_BLOCK_ON_CACHE, i.e. upstream access impossible, so audio rendered entirely from cache)
-- [x] build-verified: `:app:assembleDebug` produces debug APK
+## Verification ledger (as of loop 4, 2026-11-07)
+- [x] unit-verified: `:app:testDebugUnitTest` 55/55 — gate 7, playback 7, catalog-download 8,
+      download-store 6, acceptance 12, accessibility 7, download-control 5 (new), catalog-section 3 (new,
+      Robolectric Compose interaction/semantics).
+- [x] build-verified: `:app:assembleDebug` produces debug APK (20.4 MB, applicationId intact)
+- [x] lint-verified: `:app:lintDebug` green (UnsafeOptInUsageError disabled with rationale)
+- [x] device-verified: loop-2 streaming playback 1/1; loop-3 download COMPLETED 1/1 + offline
+      READINESS bytes 1/1 + offline PLAYBACK via FLAG_BLOCK_ON_CACHE 1/1 (API 37 x86_64 emulator).
 - [ ] unverified now: audible real-speaker (human); real licensed catalogue (present is demo fixtures);
-      Downloads/player UI (loop 4); lint on this branch; independent QA + release candidate (loop 6).
+      loop-4 rendered PIXELS on a device (headless emulator ⇒ only Compose semantics/interaction
+      verified via Robolectric); independent QA + release candidate (loop 6).
+
+## Loop 4 implementation notes (important for the next worker)
+- `LicensedCatalogSection` (ui/LicensedCatalogSection.kt) is mounted at the top of My Music. It renders
+  as a plain **Column**, intentionally NOT a nested LazyColumn: a second scrollable breaks
+  `MornicaAccessibilityTest` (its `performScrollToNode` assumes a single scrollable). If a real
+  catalogue grows past ~10 rows, switch to a LazyColumn AND scope the accessibility test's scrollable.
+- Wi-Fi-only: `router.setWifiOnlyDownloads(Boolean)` persists in state + calls
+  `CatalogDownloadController.setWifiOnlyDownload`, which sets
+  `DownloadManager.setRequirements(NETWORK_UNMETERED | NETWORK)`. Wired via `MornicaRuntime.wireCatalogDownloads`
+  with `NETWORK` default (the Loop-3 note below says tighten to unmetered — it's now a user setting).
+- Cancel: `router.cancelCatalogDownload(trackId)` → `CatalogDownloadController.cancelDownload(mediaId)`
+  backed by the real `DownloadManager.removeDownload(...)`.
+- Enablement: `MainActivity.onCreate` calls `MornicaRuntime.wireCatalogDownloads(appContext)` (idempotent),
+  which attaches the gate-backed `CatalogDownloadManager` + a real download controller and sets
+  `downloadServiceStarter` to start `CatalogDownloadService` via `buildAddDownloadIntent`.
+- Demo catalogue is 2 tracks (afrobeat offlineAllowed + stream-only). `LicensedCatalogConfig.DEMO_TRUSTED_AUDIO_HOSTS`
+  still `setOf("soundhelix.com")` — the only verified demo host (Google test bucket is 403).
+- `@OptIn(UnstableApi::class)` has NO effect here (UnstableApi is a marker annotation, not @RequiresOptIn) —
+  produces harmless compiler warnings; `UnsafeOptInUsageError` is disabled in app/build.gradle.kts.
 
 ## Loop 3 implementation notes (important for the next worker)
 - Media3 1.5.x: download classes live in `androidx.media3.exoplayer.offline` (NOT `.download`).
 - A standalone `DownloadManager` does NOT auto-run downloads — drive them through `CatalogDownloadService`
-  (foreground `DownloadService`). `DownloadManager.setRequirements(Requirements(NETWORK))` lets downloads
-  start on any (even metered) network; tighten to Wi-Fi-only in a shipping build.
+  (foreground `DownloadService`).
 - `DownloadRequest` has no `setMediaId`; builder is `DownloadRequest.Builder(mediaId, Uri)`.
 - Do NOT set `customCacheKey` on download requests — playback's CacheDataSource keys by URI, so both must
   share the URI key for offline reads.

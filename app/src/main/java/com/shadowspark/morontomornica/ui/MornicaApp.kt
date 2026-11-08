@@ -105,6 +105,7 @@ import androidx.compose.ui.unit.dp
 import com.shadowspark.morontomornica.domain.LocalMediaRepository
 import com.shadowspark.morontomornica.domain.MornicaUiState
 import com.shadowspark.morontomornica.domain.PlaybackRouter
+import com.shadowspark.morontomornica.model.ActiveEngine
 import com.shadowspark.morontomornica.model.ArtistLaunchRequest
 import com.shadowspark.morontomornica.model.LibraryTab
 import com.shadowspark.morontomornica.model.LocalMediaTrack
@@ -384,6 +385,9 @@ private fun MyMusicOfflineScreen(
     }
 
   Column(modifier = Modifier.fillMaxSize()) {
+    // Loop 4: Licensed streaming + offline downloads surface (Nigerian-friendly).
+    LicensedCatalogSection(uiState = uiState, router = router)
+
     // 1. 5-Tab Musicolet-Style Icon + Label Top Bar (Tracks | Queues | Albums | Artists | Folders)
     Surface(
       color = MornicaSlateHeader,
@@ -847,7 +851,16 @@ private fun OfflineMiniPlayerBar(
   uiState: MornicaUiState,
   router: PlaybackRouter,
 ) {
-  val active = uiState.activeLocalTrack ?: return
+  val title =
+    when (uiState.activeEngine) {
+      ActiveEngine.LICENSED_CATALOG -> uiState.activeCatalogTrack?.title
+      else -> uiState.activeLocalTrack?.title
+    } ?: return
+  val artist =
+    when (uiState.activeEngine) {
+      ActiveEngine.LICENSED_CATALOG -> uiState.activeCatalogTrack?.artist.orEmpty()
+      else -> uiState.activeLocalTrack?.artist.orEmpty()
+    }
   val maxDuration = uiState.localDurationMs.coerceAtLeast(1_000L)
   val position = uiState.localPositionMs.coerceIn(0L, maxDuration)
   val progress = (position.toFloat() / maxDuration.toFloat()).coerceIn(0f, 1f)
@@ -895,7 +908,7 @@ private fun OfflineMiniPlayerBar(
           }
           Column(modifier = Modifier.weight(1f)) {
             Text(
-              text = active.title,
+              text = title,
               style = MaterialTheme.typography.bodyMedium,
               fontWeight = FontWeight.Bold,
               color = MornicaTextLight,
@@ -903,7 +916,7 @@ private fun OfflineMiniPlayerBar(
               overflow = TextOverflow.Ellipsis,
             )
             Text(
-              text = "${active.artist} • ${formatDurationMs(position)} / ${formatDurationMs(maxDuration)}",
+              text = "$artist • ${formatDurationMs(position)} / ${formatDurationMs(maxDuration)}",
               style = MaterialTheme.typography.labelSmall.withTabularNums(),
               color = MornicaCyan,
               maxLines = 1,

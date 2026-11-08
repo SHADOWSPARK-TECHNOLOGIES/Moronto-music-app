@@ -1,10 +1,12 @@
 package com.shadowspark.morontomornica.domain
 
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import androidx.core.content.ContextCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -13,6 +15,9 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.offline.DownloadRequest
+import androidx.media3.exoplayer.offline.DownloadService
+import androidx.media3.exoplayer.scheduler.Requirements
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -49,6 +54,17 @@ interface LocalAudioController {
   fun stop()
 }
 
+/**
+ * Loop 4: app-level download controls the UI can call (cancel a download / enforce Wi-Fi-only).
+ * Wired to the real Media3 DownloadManager in production; injectable so the router is unit-testable.
+ */
+interface CatalogDownloadController {
+  /** Removes/stops a download by its catalogue mediaId; returns true if the controller handled it. */
+  fun cancelDownload(mediaId: String): Boolean
+  /** Toggles Wi-Fi-only for future downloads (unmetered requirement) + reports a preferred state. */
+  fun setWifiOnlyDownload(enabled: Boolean)
+}
+
 data class MornicaUiState(
   val currentScreen: PrimaryScreen = PrimaryScreen.MY_MUSIC,
   val activeEngine: ActiveEngine = ActiveEngine.NONE,
@@ -83,6 +99,7 @@ data class MornicaUiState(
   val catalogTracks: List<LicensedCatalogTrack> = emptyList(),
   val activeCatalogTrack: LicensedCatalogTrack? = null,
   val catalogDownloadStates: Map<String, CatalogDownloadState> = emptyMap(),
+  val preferWifiOnlyDownloads: Boolean = false,
   // Domain C: Creator Launch Hub
   val creatorProfiles: List<CreatorProfile> = emptyList(),
   val submittedLaunchRequests: List<ArtistLaunchRequest> = emptyList(),
@@ -96,8 +113,9 @@ class PlaybackRouter(
   private val licensedCatalogRepository: LicensedCatalogRepository = LicensedCatalogRepository(),
   private val catalogRights: LicensedCatalogRights = LicensedCatalogConfig.demoRights(),
   private val territoryProvider: () -> String = { "NG" },
-  private val catalogDownloadManager: CatalogDownloadManager? = null,
+  private var catalogDownloadManager: CatalogDownloadManager? = null,
   private val downloadStore: DownloadStore? = null,
+  private var catalogDownloadController: CatalogDownloadController? = null,
   private val onLocalAudioCommand: ((LocalMediaTrack?, Boolean) -> Unit)? = null,
   private var localAudioController: LocalAudioController? = null,
 ) {
@@ -344,6 +362,45 @@ class PlaybackRouter(
   /** Whether any downloaded bytes for this track may be played offline RIGHT NOW (fail-closed). */
   fun offlinePlaybackAllowed(track: LicensedCatalogTrack): Boolean =
     downloadStore?.get(track.id)?.mayPlayOffline(territoryProvider(), System.currentTimeMillis()) ?: false
+
+  /** Attach/refresh the app-level download controller (cancel + Wi-Fi-only). Injectable for tests. */
+  fun attachDownloadController(controller: CatalogDownloadController?) {
+    catalogDownloadController = controller
+    controller?.setWifiOnlyDownload(_state.value.preferWifiOnlyDownloads)
+  }
+
+  /** Attach the gate-backed download manager so requestCatalogDownload works (wired by the host app). */
+  fun attachCatalogDownloadManager(manager: CatalogDownloadManager?) {
+    catalogDownloadManager = manager
+  }
+
+  /** Wi-Fi-only download preference: persists in state, enforces the live requirement, messages the user. */
+  fun setWifiOnlyDownloads(enabled: Boolean) {
+    catalogDownloadController?.setWifiOnlyDownload(enabled)
+    _state.update {
+      it.copy(
+        preferWifiOnlyDownloads = enabled,
+        statusBannerMessage =
+          if (enabled) "Downloads now Wi-Fi-only. Your data won't waste."
+          else "Downloads can use mobile data now.",
+      )
+    }
+  }
+
+  /** Cancels/stops the download for a catalogue track via the download controller. */
+  fun cancelCatalogDownload(trackId: String): Boolean {
+    val track = _state.value.catalogTracks.find { it.id == trackId } ?: return false
+    val handled = catalogDownloadController?.cancelDownload(track.toMediaId()) ?: false
+    if (handled) {
+      _state.update {
+        it.copy(
+          catalogDownloadStates = it.catalogDownloadStates - trackId,
+          statusBannerMessage = "Download cancelled for ${track.title}.",
+        )
+      }
+    }
+    return handled
+  }
 
   fun toggleLocalPlayPause() {
     val current = _state.value
@@ -946,6 +1003,8 @@ class Media3LocalAudioController(
 @OptIn(UnstableApi::class)
 object MornicaRuntime {
   @Volatile var serviceStarter: (() -> Unit)? = null
+  @Volatile var downloadServiceStarter: ((DownloadRequest) -> Unit)? = null
+  @Volatile private var catalogDownloadsWired = false
   val localRepo: LocalMediaRepository = LocalMediaRepository()
   val youtubeRepo: YouTubeDiscoveryRepository = YouTubeDiscoveryRepository()
   val router: PlaybackRouter =
@@ -958,6 +1017,49 @@ object MornicaRuntime {
         }
       },
     )
+
+  /**
+   * Wire Loop 4 UI actions to the real Media3 download service once a Context is available.
+   * Idempotent; called by MainActivity. Enables requestCatalogDownload (starts
+   * CatalogDownloadService), cancel (removes from the shared DownloadManager), and Wi-Fi-only.
+   */
+  fun wireCatalogDownloads(context: Context) {
+    if (catalogDownloadsWired) return
+    catalogDownloadsWired = true
+    downloadServiceStarter = { request ->
+      val intent =
+        DownloadService.buildAddDownloadIntent(
+          context,
+          CatalogDownloadService::class.java,
+          request,
+          /* serialize = */ false,
+        )
+      ContextCompat.startForegroundService(context, intent)
+    }
+    val real = CatalogDownloads.realDownloadManager(context)
+    router.attachCatalogDownloadManager(
+      CatalogDownloadManager(
+        rights = LicensedCatalogConfig.demoRights(),
+        territoryProvider = { "NG" },
+        enqueueRequest = { url, id ->
+          downloadServiceStarter?.invoke(DownloadRequest.Builder(id, Uri.parse(url)).build())
+        },
+      ),
+    )
+    router.attachDownloadController(
+      object : CatalogDownloadController {
+        override fun cancelDownload(mediaId: String): Boolean {
+          real.removeDownload(mediaId)
+          return true
+        }
+        override fun setWifiOnlyDownload(enabled: Boolean) {
+          real.setRequirements(
+            Requirements(if (enabled) Requirements.NETWORK_UNMETERED else Requirements.NETWORK),
+          )
+        }
+      },
+    )
+  }
 }
 
 /**
