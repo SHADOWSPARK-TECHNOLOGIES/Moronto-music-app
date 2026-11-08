@@ -50,15 +50,30 @@ class Media3OfflineReadinessVerifier(context: Context) : OfflineReadinessVerifie
   private val cache = MediaCache.cache(context)
 
   override fun isGenuinelyReadyForOffline(track: LicensedCatalogTrack): Boolean {
-    // 1) The real DownloadIndex must show STATE_COMPLETED for this media id.
-    val completedInIndex =
-      runCatching { downloadManager.downloadIndex.getDownload(track.toMediaId())?.state }
-        .getOrNull() == Download.STATE_COMPLETED
-    if (!completedInIndex) return false
-    // 2) The shared cache must actually hold bytes for the media URI playback will read.
-    //    Cache key == the plain media URL (shared with download, no customCacheKey).
+    // 1) The real DownloadIndex must report this media as STATE_COMPLETED.
+    val completed =
+      runCatching { downloadManager.downloadIndex.getDownload(track.toMediaId()) }
+        .getOrNull()
+    if (completed == null || completed.state != Download.STATE_COMPLETED) return false
+
+    // 2) FULL cache completeness, not merely >0 bytes. A partial/evicted file must not count as
+    //    "ready offline" even though it has some bytes. Two independent signals:
+    //       (a) Media3's own completion bookkeeping: bytesDownloaded >= contentLength when a
+    //           content length is known (contentLength > 0). For C.LENGTH_UNSET (contentLength 0),
+    //           rely on the persisted COMPLETED state + (b).
+    //    The cache is keyed by the plain media URI (no customCacheKey), so cache.getCachedBytes
+    //    on track.mediaUrl is the same space playback reads.
+    val contentLength = completed.contentLength
+    val downloaded = runCatching { completed.getBytesDownloaded() }.getOrNull() ?: 0L
+    if (contentLength > 0L && downloaded < contentLength) return false
+
+    // 3) The shared cache genuinely holds the full media bytes for the URI playback will read;
+    //    a positive-but-partial cache (e.g. after eviction/partial deletion) must fail closed.
     val cachedBytes =
       runCatching { cache.getCachedBytes(track.mediaUrl, 0L, Long.MAX_VALUE) }.getOrNull() ?: 0L
+    if (contentLength > 0L) {
+      return cachedBytes >= contentLength
+    }
     return cachedBytes > 0L
   }
 }

@@ -1,12 +1,17 @@
 package com.shadowspark.morontomornica
 
+import androidx.media3.common.MediaItem
 import com.shadowspark.morontomornica.domain.CatalogDownloadState
 import com.shadowspark.morontomornica.domain.DemoCatalogSource
 import com.shadowspark.morontomornica.domain.DownloadRecord
 import com.shadowspark.morontomornica.domain.InMemoryDownloadStore
 import com.shadowspark.morontomornica.domain.LicensedCatalogTrack
+import com.shadowspark.morontomornica.domain.LocalAudioController
 import com.shadowspark.morontomornica.domain.OfflineReadinessVerifier
 import com.shadowspark.morontomornica.domain.PlaybackRouter
+import com.shadowspark.morontomornica.model.LocalMediaTrack
+import com.shadowspark.morontomornica.model.RepeatMode
+import com.shadowspark.morontomornica.domain.toMedia3Item
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -37,6 +42,23 @@ class OfflineReadinessVerifierTest {
     InMemoryDownloadStore().apply {
       save(DownloadRecord.fromTrack(offlineTrack, "NG", System.currentTimeMillis()))
     }
+
+  /** Records whether the actual player layer was handed any MediaItems (Gate-2 network-fallback spy). */
+  private class RecordingAudioController : LocalAudioController {
+    var playMediaItemsCalls = 0
+    var lastItems: List<MediaItem> = emptyList()
+    override fun bindRouter(router: PlaybackRouter) {}
+    override fun playTrack(track: LocalMediaTrack, queue: List<LocalMediaTrack>, repeatMode: RepeatMode, shuffleEnabled: Boolean) {}
+    override fun playMediaItems(items: List<MediaItem>, startIndex: Int) {
+      playMediaItemsCalls++
+      lastItems = items
+    }
+    override fun setPlayWhenReady(playWhenReady: Boolean) {}
+    override fun seekTo(positionMs: Long) {}
+    override fun setShuffleEnabled(shuffleEnabled: Boolean) {}
+    override fun setRepeatMode(repeatMode: RepeatMode) {}
+    override fun stop() {}
+  }
 
   // --- Gate 1: real index+cache is the authority, not the stored snapshot ---
 
@@ -147,6 +169,48 @@ class OfflineReadinessVerifierTest {
     assertTrue("Play offline must succeed when bytes are genuinely present", router.playDownloadedCatalogTrack(offlineTrack))
     assertEquals(offlineTrack.id, router.state.value.activeCatalogTrack?.id)
     assertTrue(router.state.value.statusBannerMessage.orEmpty().contains("Playing offline", ignoreCase = true))
+  }
+
+  @Test
+  fun playDownloadedCatalogTrack_neverHandsPlayerAnIncompleteItem() {
+    // Gate 2: the player layer must NEVER receive an incomplete/not-genuinely-downloaded item,
+    // otherwise Media3's cache+upstream source could silently fall back to network streaming.
+    val controller = RecordingAudioController()
+    val store = readyStore()
+    val router = PlaybackRouter(localAudioController = controller).apply {
+      attachDownloadStore(store)
+      attachOfflineReadiness(FakeVerifier(ready = false))
+    }
+    router.onDownloadStateChanged(offlineTrack.id, CatalogDownloadState.COMPLETED)
+
+    // Even though state+snapshot say COMPLETED, the real engine lacks the bytes -> offline play
+    // must be refused BEFORE the controller/player is touched.
+    assertFalse(router.playDownloadedCatalogTrack(offlineTrack))
+    assertEquals(
+      "player must not be handed an incomplete offline item (no network-stream fallback)",
+      0,
+      controller.playMediaItemsCalls,
+    )
+    assertEquals("player must not receive any media item", emptyList<MediaItem>(), controller.lastItems)
+  }
+
+  @Test
+  fun playDownloadedCatalogTrack_handsPlayerOnlyGenuinelyReadyItem() {
+    val controller = RecordingAudioController()
+    val store = readyStore()
+    val router = PlaybackRouter(localAudioController = controller).apply {
+      attachDownloadStore(store)
+      attachOfflineReadiness(FakeVerifier(ready = true))
+    }
+    router.onDownloadStateChanged(offlineTrack.id, CatalogDownloadState.COMPLETED)
+
+    assertTrue(router.playDownloadedCatalogTrack(offlineTrack))
+    assertEquals(
+      "player must be handed exactly the genuinely-ready offline item",
+      1,
+      controller.playMediaItemsCalls,
+    )
+    assertEquals(listOf(offlineTrack.toMedia3Item()), controller.lastItems)
   }
 
   // --- Gate 1: failed downloads never leave bytes/ready behind ---
