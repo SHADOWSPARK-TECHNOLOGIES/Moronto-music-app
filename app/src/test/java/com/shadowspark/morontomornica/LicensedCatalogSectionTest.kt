@@ -9,6 +9,8 @@ import androidx.compose.ui.test.performClick
 import com.shadowspark.morontomornica.domain.MornicaUiState
 import com.shadowspark.morontomornica.domain.PlaybackRouter
 import com.shadowspark.morontomornica.ui.LicensedCatalogSection
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -34,11 +36,11 @@ class LicensedCatalogSectionTest {
       LicensedCatalogSection(uiState = router.state.value, router = router)
     }
 
-    compose.onNodeWithText("Licensed & Downloaded").assertIsDisplayed()
-    compose.onNodeWithText("Wi-Fi only for downloads").assertIsDisplayed()
-    // Multiple demo tracks each expose a Stream + Download action and a DEMO source label.
+    compose.onNodeWithText("Ready to play").assertIsDisplayed()
+    compose.onNodeWithText("Wi-Fi downloads").assertIsDisplayed()
+    // Multiple demo tracks each expose a Stream/Play action and a DEMO source label.
     assertTrue(compose.onAllNodes(hasText("Stream", substring = true)).fetchSemanticsNodes().isNotEmpty())
-    assertTrue(compose.onAllNodes(hasText("Download for later", substring = true)).fetchSemanticsNodes().isNotEmpty())
+    assertTrue(compose.onAllNodes(hasText("Save offline", substring = true)).fetchSemanticsNodes().isNotEmpty())
     assertTrue(compose.onAllNodes(hasText("DEMO", substring = true)).fetchSemanticsNodes().isNotEmpty())
   }
 
@@ -49,7 +51,7 @@ class LicensedCatalogSectionTest {
     compose.setContent {
       LicensedCatalogSection(uiState = empty, router = router)
     }
-    compose.onNodeWithText("No licensed tracks available yet. Check back soon.").assertIsDisplayed()
+    compose.onNodeWithText("No tracks available yet — check back soon").assertIsDisplayed()
   }
 
   @Test
@@ -61,5 +63,33 @@ class LicensedCatalogSectionTest {
     // The Switch is clickable; toggling it must flip the router preference.
     compose.onNode(isToggleable()).performClick()
     compose.runOnIdle { assertTrue(router.state.value.preferWifiOnlyDownloads) }
+  }
+
+  @Test
+  fun streamOnlyTrackHidesDownloadControl() {
+    val router = PlaybackRouter()
+    val state = router.state.value
+    val streamOnly = state.catalogTracks.first { !it.offlineAllowed }
+    assertFalse("Demo catalog must include a streaming-only (no-offline) track", streamOnly.offlineAllowed)
+
+    compose.setContent {
+      LicensedCatalogSection(uiState = state, router = router)
+    }
+
+    // Streaming-only track must expose the visibly-unavailable label, never a download control.
+    assertTrue(
+      compose.onAllNodes(hasText("Streaming only", substring = true)).fetchSemanticsNodes().isNotEmpty(),
+    )
+    assertEquals(
+      "Only the offline-allowed track may offer 'Save offline'; streaming-only hides it",
+      1,
+      compose.onAllNodes(hasText("Save offline", substring = true)).fetchSemanticsNodes().size,
+    )
+    // And it must not offer a Retry/Cancel download control either.
+    assertEquals(
+      "Streaming-only track must not expose download cancellation",
+      0,
+      compose.onAllNodes(hasText("Cancel", substring = true)).fetchSemanticsNodes().size,
+    )
   }
 }

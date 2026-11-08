@@ -2,6 +2,7 @@ package com.shadowspark.morontomornica.ui
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -124,6 +125,20 @@ fun MornicaApp(
   val uiState by router.state.collectAsState()
   val context = LocalContext.current
 
+  // Back navigation: collapse an expanded Now Playing sheet first, then return to My Music
+  // from the other primary screens. On the My Music home screen (sheet collapsed) Back is
+  // left untouched so the system default (leave the app) still applies.
+  val backEnabled =
+    (uiState.isNowPlayingExpanded && uiState.activeLocalTrack != null) ||
+      uiState.currentScreen != PrimaryScreen.MY_MUSIC
+  BackHandler(enabled = backEnabled) {
+    if (uiState.isNowPlayingExpanded && uiState.activeLocalTrack != null) {
+      router.setNowPlayingExpanded(false)
+    } else {
+      router.selectScreen(PrimaryScreen.MY_MUSIC)
+    }
+  }
+
   MornicaTheme {
     Scaffold(
       containerColor = MornicaMidnightBg,
@@ -143,7 +158,10 @@ fun MornicaApp(
       },
       bottomBar = {
         Column(modifier = Modifier.navigationBarsPadding()) {
-          if (uiState.activeLocalTrack != null && !uiState.isNowPlayingExpanded) {
+          if (
+            (uiState.activeLocalTrack != null || uiState.activeCatalogTrack != null) &&
+              !uiState.isNowPlayingExpanded
+          ) {
             OfflineMiniPlayerBar(uiState = uiState, router = router)
           }
           HorizontalDivider(color = MornicaSlateBorder, thickness = 1.dp)
@@ -276,7 +294,7 @@ private fun MorontoTopHeader(
           }
           Column(modifier = Modifier.weight(1f)) {
             Text(
-              text = "Mornica Music",
+              text = "Mornica",
               style = MaterialTheme.typography.titleLarge,
               fontWeight = FontWeight.ExtraBold,
               color = MornicaTextLight,
@@ -285,10 +303,10 @@ private fun MorontoTopHeader(
               overflow = TextOverflow.Ellipsis,
             )
             Text(
-              text = "by ShadowSpark Technologies ⚡",
+              text = "Your music, your way",
               style = MaterialTheme.typography.labelMedium,
-              color = MornicaCyan,
-              fontWeight = FontWeight.SemiBold,
+              color = MornicaTextMuted,
+              fontWeight = FontWeight.Medium,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis,

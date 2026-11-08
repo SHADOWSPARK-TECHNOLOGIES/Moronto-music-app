@@ -32,3 +32,8 @@ coverage/
 *.iml
 .vscode/
 .DS_Store
+
+# Local machine-only (this host) — not part of the shared build
+gradle/gradle-daemon-jvm.properties
+screenshots/
+*.local
