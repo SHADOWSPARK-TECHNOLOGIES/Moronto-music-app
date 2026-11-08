@@ -255,3 +255,38 @@ Non-blocking follow-ups recorded (not blockers, not fixed this closure to keep i
   bypass; keep unless a real stream-not/offline-yes entitlement exists.
 - N2 `isLocalPlaying` direct-set hardening remains out of scope (pre-existing, owner decision).
 
+## 2026-11-08 — Final pre-signing review (7 gates)
+
+Ran the P0 pre-signing review against PR #17 (HEAD advanced to `0e9ce90`). Outcome per gate:
+1. **Full cache-completeness gate (DONE).** `Media3OfflineReadinessVerifier` now requires the real
+   `DownloadIndex` + cache to reach the FULL `Download.contentLength` (and `bytesDownloaded >=
+   contentLength`) — not merely `bytes>0`. On-device proof on this exact build: after a genuine PARTIAL
+   cache deletion (removed one of two spans, 5.24MB of 8.9MB) + offline relaunch, the card FAILED CLOSED
+   to "Save offline"/"Stream" — no "Ready offline" — even though DownloadIndex still reported COMPLETED
+   and the rights snapshot existed. Prior `bytes>0` shortcut removed.
+2. **No silent network-stream fallback (DONE).** Two new spy tests prove `playDownloadedCatalogTrack`
+   is refused BEFORE the controller/player when the file is incomplete (`playMediaItemsCalls==0`,
+   `lastItems==empty`), and hands the player exactly the genuinely-ready item otherwise. Media3's
+   cache+upstream Factory can therefore never stream an incomplete offline file.
+3. **PR #17 description updated to the actual final 75-test / QA / caveat state**; obsolete claims from
+   earlier dev stages removed.
+4. **Branches preserved.** PR #14 (loop4 catalog→main), #15 (brand/design-build contract→PR#14 head),
+   #17 (this branch→PR#14 head) all OPEN+draft, heads intact. Integration chain: #14 merges→main, then #
+   17 and #15 rebase-merge onto main after #14 (their base is #14's head `138ae72`); none drops the
+   verified implementation or the brand contract.
+5. **Signing keystore/alias (BLOCKED).** Keystore exists (3672 B, perms 600,
+   `~/.local/share/moronto-mornica/signing/upload.jks`); gradle default alias `moronto-upload`
+   confirmed in build.gradle.kts. But ALL signing-credential vars (`UPLOAD_KEYSTORE_PASSWORD`,
+   `UPLOAD_KEY_ALIAS`, `UPLOAD_KEY_PASSWORD` + STORE/KEY forms) are UNSET in shell env,
+   `.hermes/.env`, and gradle.properties → a signed release cannot be produced from this environment.
+   Per instructions, no password requested in chat, none exposed in logs, no new key generated.
+6. **Screenshots accessible for independent review (recorded).** Captured GENUINE screenshots from the
+   exact release-candidate HEAD `0e9ce90` / APK `c31291c5` at 412dp, 360dp, 360dp@1.3× →
+   `screenshots/prc_412dp.png`, `screenshots/prc_360dp.png`, `screenshots/prc_360dp_13.png`
+   (1080×2400; gitignored → NOT on GitHub, path-only). Structural uiautomator confirms the brand header,
+   "Ready to play" section, ready-offline state, 5 library tabs, bottom nav. Visual pixel review still
+   needs a human/multimodal model (host model non-multimodal) — not claimed.
+7. **GO/NO-GO recorded** (see completion report). Final numbers on exact HEAD: **75/75 units, 0 lint,
+   APK `c31291c5` (20,549,045 B), instrumented 1/0/0**, plus airplane-mode PLAYING + partial-deletion
+   fail-closed proofs. No merge/release/signing performed.
+
