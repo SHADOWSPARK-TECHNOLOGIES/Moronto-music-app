@@ -14,8 +14,19 @@ Authoritative spec: `docs/agent-loop/MORNICA_NIGERIA_FIRST_STREAMING_OFFLINE_SPE
 
 ## Last verified state (2026-11-08)
 - `main` = `7c6ade8` — PRs #11, #12, #13 MERGED.
-- Branch `agent/antigravity-mornica-ui-polish-20261108` based on HEAD `dedb9d2`.
-- Working tree: UI polish recovered & refined; offline persistence invariant corrected (download store saves snapshot ONLY upon COMPLETED; interrupted/incomplete downloads never surface as completed on restart); 65 unit tests + 0 lint errors pass.
+- Branch `agent/antigravity-mornica-ui-polish-20261108` at HEAD `9bf463f` (UI polish + Media3 download
+  persistence reconciliation), pushed, working tree clean.
+- WORKING TREE RECORD: UI polish recovered & refined; offline persistence
+  invariant corrected (download store saves snapshot ONLY upon COMPLETED; interrupted/incomplete downloads
+  never surface as completed on restart); **65/65 unit tests + 0 lint errors + debug APK build re-verified
+  live** (SHA `3f22b58f…`, build-run-specific — the older `90105a…` in the ledger is a different run, not a
+  source drift claim).
+- **Loop 5 airplane-mode offline playback DEVICE-VERIFIED** (2026-11-08, this session): with Wi-Fi + mobile
+  data disabled (`svc wifi/data disable`; `ping` → Network is unreachable), the previously-downloaded
+  afrobeat demo track renders `1 track saved · ready offline` + `Ready offline`, plays to 18.2s+ `PLAYING(3)`
+  with zero network errors in logcat (bytes from the local SimpleCache), streaming-only track stays
+  `Streaming only`, and `ready offline` survives force-stop + full-offline relaunch. Evidence in
+  `docs/EXECUTION_LOG.md` 2026-11-08 Loop-5 entry + `screenshots/loop5-offline-ready.png`.
 
 ## Verification ledger (as of 2026-11-08)
 - [x] unit-verified: `:app:testDebugUnitTest` 65/65 — gate 7, playback 7, catalog-download 8,

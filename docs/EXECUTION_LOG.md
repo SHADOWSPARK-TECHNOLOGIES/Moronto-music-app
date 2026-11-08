@@ -98,3 +98,38 @@ in `screenshots/audit-20261108/`):
   here): persist a real `DownloadStore` + observe `DownloadManager.Listener` completion → router
   COMPLETED. Not merged or published.
 
+## 2026-11-08 — Loop-5 airplane-mode offline playback proof (branch agent/antigravity-mornica-ui-polish-20261108)
+
+Took over from the Antigravity UI-polish branch (HEAD `9bf463f`). First re-verified the recorded baseline before
+working (STATE notes are self-reports, not evidence): `./gradlew --no-daemon :app:testDebugUnitTest
+:app:lintDebug :app:assembleDebug` = BUILD SUCCESSFUL, **65/65 unit tests / 0 failures / 0 lint errors**,
+debug APK 20.4 MB (`sha256 3f22b58fb5dc386c5cb7f0ef248475f7132f8fb454eeb7c3fa9ba0a8ae424f04` — run-specific,
+differs from the older `90105a…` recorded in STATE.md; hashes are build-run-specific, not claims of source drift).
+
+Then exercised the smallest next objective per STATE.md active loop 5 / sync-prompt PHASE 4:
+**device-verified airplane-mode offline playback** of a previously-licensed downloaded catalog track, on the
+Antigravity branch build.
+
+On-device (headless API-37 x86_64 emulator `emulator-5554`, AVD `Medium_Phone`, freshly installed
+`-r -g` the tree's APK; offline snapshot in `no_backup/catalog_downloads.json` for
+`catalog-demo-afrobeat-01` PRESERVED across reinstall):
+- Isolated network: `svc wifi disable` + `svc data disable` (literal `AIRPLANE_MODE` broadcast is
+  Permission-denied from shell, as expected). `ping 8.8.8.8` → `Network is unreachable`, 0 active networks.
+- [x] **`1 track saved · ready offline`** + afrobeat card shows a **"Ready offline"** control (uiautomator:
+  text nodes `1 track saved · ready offline` bounds[37,560][459,602]; `Ready offline` bounds[320,863][534,916])
+  — i.e. the Antigravity Offline-Ready wiring (attachDownloadStore + DownloadManager completion → router
+  COMPLETED) surfaces at runtime, previously BLOCKED.
+- [x] Streaming-only demo track still renders **"Streaming only"** (no download control) while offline — gate
+  fail-closed preserved.
+- [x] Tap Play → MediaSession `state=PLAYING(3)` progressing 0→3.1s→**18.2s**; audio MediaCodec initialized,
+  audio focus granted; **zero** network errors in logcat (no ExoPlaybackException/IoException/Socket/SSL), all
+  bytes served from the local SimpleCache (`cache/mornica-media3-cache/*.v3.exo`, 11M) with RF unreachable.
+- [x] Force-stop → relaunch fully offline → card still reads `1 track saved · ready offline` + `Ready offline`
+  (offline-ready survives process restart — the persistence-invariant fix).
+- Evidence: `screenshots/loop5-offline-ready.png` (`sha256 a1090204…`), uiautomator trees in this run.
+
+Verdict: **Loop-5 airplane-mode offline playback DEVICE-VERIFIED** on this emulator (structural/uiautomator +
+MediaSession/logcat, not pixel-reviewed; audible sound on a physical speaker still needs a human listen).
+No code change was required this cycle — this was pure verification of the branch that was previously only
+unit/instrumented-verified. No push/merge/publish.  Physical-device radio toggle remains UNVERIFIED.
+
