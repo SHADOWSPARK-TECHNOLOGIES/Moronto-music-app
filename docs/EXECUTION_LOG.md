@@ -290,3 +290,29 @@ Ran the P0 pre-signing review against PR #17 (HEAD advanced to `0e9ce90`). Outco
    APK `c31291c5` (20,549,045 B), instrumented 1/0/0**, plus airplane-mode PLAYING + partial-deletion
    fail-closed proofs. No merge/release/signing performed.
 
+## 2026-11-08 — TOOLCHAIN DECISION: Gradle 9.8.2 adopted (owner-approved)
+
+**Owner decision: KEEP Gradle 9.8.2. DO NOT REVERT.** The working-tree wrapper was locally upgraded
+(9.6.0 → 9.8.2, dropping the checksum pin) outside any commit; after the Hermes-gateway recovery and a
+successful verification run, the owner froze it as the Mornica development baseline.
+
+Finalized wrapper integrity (all verified, not invented):
+1. Selected distribution: Gradle **9.8.2-bin.zip** (`distributionUrl` in gradle-wrapper.properties).
+2. Official SHA-256 pin **restored**: `21bd5da2de49b642904077f38c0efdc7778e92b3ed0889392dca61b97e389607`,
+   taken from the official services.gradle.org checksum endpoint (cross-confirmed authoritative: the same
+   endpoint returns the committed 9.6.0 pin `bbaeb2fe…` exactly).
+3. Wrapper JAR verified authentic: regenerating the wrapper from the OFFICIAL 9.8.2 distribution
+   (`gradle wrapper --gradle-version 9.8.2`) yields a jar with sha `3b8a25775a69158b5ad2b1d17a80a88dc7b40a352a73eb27d06c612a7ce68e98`
+   (48,749 B) — **byte-identical** to the repo's `gradle/wrapper/gradle-wrapper.jar`.
+4. Latest successful build under the pinned 9.8.2 (post-recovery): `:app:testDebugUnitTest :app:lintDebug
+   :app:assembleDebug` → **BUILD SUCCESSFUL**, exit 0, **75/75 unit tests / 0 failures / 0 errors / 0
+   skipped**, lint **0 errors / 34 warnings**, **debug APK sha256
+   `2c3dead511fc5b528a1a4781cf8265a9dc5f391981817274b80c3c707498968d` (20,411,263 B)**. (Earlier recorded
+   APK `c31291c5…` was the same source under the 9.6.0 toolchain — hash is toolchain-run-specific.)
+5. AGP `9.5.1` + Kotlin `2.2.10` remain pinned (committed `gradle/libs.versions.toml`). **Gradle + AGP now
+   frozen; no further upgrades without a demonstrated need.**
+6. All unrelated local changes preserved and UNCOMMITTED: `.idea/{gradle,misc,modules}.xml`, untracked
+   `.kotlin/`, `.run/`. Only the isolated wrapper files (`gradle-wrapper.properties`, `gradle-wrapper.jar`,
+   `gradlew`, `gradlew.bat`) are committed for review. No merge, publish, signing change, or Play Console
+   action performed.
+
