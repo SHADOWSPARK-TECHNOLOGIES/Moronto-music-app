@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Mornica original soundwave M symbol">
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#071321"/><stop offset="1" stop-color="#14243A"/></linearGradient>
+ <linearGradient id="pulse" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#12D9A1"/><stop offset=".55" stop-color="#20B6EB"/><stop offset="1" stop-color="#FF6479"/></linearGradient>
+ <linearGradient id="spark" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FFF2C4"/><stop offset="1" stop-color="#FFBE55"/></linearGradient>
+</defs>
+<rect width="512" height="512" rx="112" fill="url(#bg)"/>
+<rect x="24" y="24" width="464" height="464" rx="98" fill="none" stroke="#1E6071" stroke-width="3"/>
+<path d="M92 310 C112 246 135 190 174 190 C214 190 219 276 257 276 C294 276 308 190 347 190 C389 190 406 244 420 310" fill="none" stroke="url(#pulse)" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+<g stroke="#12D9A1" stroke-width="13" stroke-linecap="round" opacity=".88"><path d="M172 367V385"/><path d="M214 354V396"/><path d="M256 342V406"/><path d="M298 354V396"/><path d="M340 367V385"/></g>
+<path d="M256 84 L268 112 L296 124 L268 136 L256 164 L244 136 L216 124 L244 112Z" fill="url(#spark)"/>
+</svg>
