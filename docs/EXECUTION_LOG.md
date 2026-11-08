@@ -229,3 +229,29 @@ independent pass (Media3 playback-state handling, offline rights, navigation, ac
 before any release; noted as outstanding. No production merge, release signing, Play upload, or
 alternative-store publication performed.
 
+## 2026-11-08 — Gate-7 independent re-review of the P0 closure + wiring-order fix
+
+A second independent skeptical QA pass ran over the closure (delegated; full log
+`/home/moronto/.hermes/cache/delegation/live/deleg_ba9846c8/task-0.log`). Verdict by source-reading:
+**PASS on gate logic** — the offline gate is genuinely fail-closed; a COMPLETED state alone cannot
+bypass Play-offline; no wrong cache key; YouTube/rights invariants intact; no secrets in the diff;
+verifier==null preserves the old snapshot-only path for the pre-existing unit tests.
+
+One real, correct finding → FIXED:
+- `attachDownloadStore`'s bytes-check was dead at runtime because `wireCatalogDownloads` called it
+  BEFORE `attachOfflineReadiness` (so `offlineReadiness` was still null and `?: true` always won). The
+  end-state was still safe only because the later attach dropped stale COMPLETED, but the intent was not
+  honoured. **Fixed by attaching the verifier first, then the store** — so persisted legacy/interrupted/
+  evicted records are genuinely not rehydrated as "ready" at startup.
+  Re-verified: `:app:testDebugUnitTest` = **73/73 / 0 failures**, `:app:lintDebug` = 0 errors,
+  `:app:assembleDebug` APK = sha256 `096299bc70a85b00f7ed465bf1d3c6059e68d670527ac385153acab2bc7018ff`
+  (20,549,045 B) — build-run-specific.
+
+Non-blocking follow-ups recorded (not blockers, not fixed this closure to keep it scoped):
+- Main-thread I/O in `downloadedCount` (per-card `DownloadIndex` SQLite read + `SimpleCache` bytes) is a
+  jank risk once a real catalogue exceeds ~10 tracks; acceptable now (demo = 2 tracks) but should move to
+  an async/cached readiness flow before production scale.
+- `evaluate(PLAY_DOWNLOADED)` still requires `streamAllowed` even for offline play — over-strict, not a
+  bypass; keep unless a real stream-not/offline-yes entitlement exists.
+- N2 `isLocalPlaying` direct-set hardening remains out of scope (pre-existing, owner decision).
+

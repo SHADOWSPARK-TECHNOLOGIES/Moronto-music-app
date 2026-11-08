@@ -1177,15 +1177,17 @@ object MornicaRuntime {
       ContextCompat.startForegroundService(context, intent)
     }
     val real = CatalogDownloads.realDownloadManager(context)
+    // Loop-6: attach the REAL offline-readiness authority (Media3 DownloadIndex + shared cache) FIRST,
+    // so attachDownloadStore below can genuinely honor it: "Ready offline" / offlinePlaybackAllowed are
+    // true only when the bytes truly exist and are COMPLETED in the engine's index — never merely
+    // because a rights snapshot was stored.
+    router.attachOfflineReadiness(OfflineReadinessVerifier.real(context))
     // Offline-Ready wiring: persist the rights snapshot and reflect DownloadManager completion in the
     // UI, so a finished download flips the card to "Offline ready" and `offlinePlaybackAllowed` returns
-    // true.
+    // true. Runs AFTER the verifier so persisted-stale records (legacy/interrupted/evicted/corrupt) are
+    // not rehydrated as "ready" at startup.
     val store = buildDownloadStore(context)
     router.attachDownloadStore(store)
-    // Loop-6: attach the REAL offline-readiness authority (Media3 DownloadIndex + shared cache) so
-    // "Ready offline" / offlinePlaybackAllowed are true only when the bytes genuinely exist and are
-    // COMPLETED in the engine's index — never merely because a rights snapshot was stored.
-    router.attachOfflineReadiness(OfflineReadinessVerifier.real(context))
     real.addListener(
       object : DownloadManager.Listener {
         override fun onDownloadChanged(
