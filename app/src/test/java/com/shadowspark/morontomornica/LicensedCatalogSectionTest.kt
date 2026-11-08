@@ -36,11 +36,11 @@ class LicensedCatalogSectionTest {
       LicensedCatalogSection(uiState = router.state.value, router = router)
     }
 
-    compose.onNodeWithText("Licensed & Downloaded").assertIsDisplayed()
-    compose.onNodeWithText("Wi-Fi only for downloads").assertIsDisplayed()
-    // Multiple demo tracks each expose a Stream + Download action and a DEMO source label.
+    compose.onNodeWithText("Ready to play").assertIsDisplayed()
+    compose.onNodeWithText("Wi-Fi downloads").assertIsDisplayed()
+    // Multiple demo tracks each expose a Stream/Play action and a DEMO source label.
     assertTrue(compose.onAllNodes(hasText("Stream", substring = true)).fetchSemanticsNodes().isNotEmpty())
-    assertTrue(compose.onAllNodes(hasText("Download for later", substring = true)).fetchSemanticsNodes().isNotEmpty())
+    assertTrue(compose.onAllNodes(hasText("Save offline", substring = true)).fetchSemanticsNodes().isNotEmpty())
     assertTrue(compose.onAllNodes(hasText("DEMO", substring = true)).fetchSemanticsNodes().isNotEmpty())
   }
 
@@ -51,7 +51,7 @@ class LicensedCatalogSectionTest {
     compose.setContent {
       LicensedCatalogSection(uiState = empty, router = router)
     }
-    compose.onNodeWithText("No licensed tracks available yet. Check back soon.").assertIsDisplayed()
+    compose.onNodeWithText("No tracks available yet — check back soon").assertIsDisplayed()
   }
 
   @Test
@@ -81,9 +81,9 @@ class LicensedCatalogSectionTest {
       compose.onAllNodes(hasText("Streaming only", substring = true)).fetchSemanticsNodes().isNotEmpty(),
     )
     assertEquals(
-      "Only the offline-allowed track may offer 'Download for later'; streaming-only hides it",
+      "Only the offline-allowed track may offer 'Save offline'; streaming-only hides it",
       1,
-      compose.onAllNodes(hasText("Download for later", substring = true)).fetchSemanticsNodes().size,
+      compose.onAllNodes(hasText("Save offline", substring = true)).fetchSemanticsNodes().size,
     )
     // And it must not offer a Retry/Cancel download control either.
     assertEquals(

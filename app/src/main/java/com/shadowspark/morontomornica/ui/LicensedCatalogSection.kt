@@ -31,11 +31,10 @@ import com.shadowspark.morontomornica.domain.MornicaUiState
 import com.shadowspark.morontomornica.domain.PlaybackRouter
 
 /**
- * Loop 4: "Licensed & Downloaded" — Nigerian-friendly catalogue with clear DEMO labels, Stream /
- * Download / Retry / Cancel / offline actions, a Wi-Fi-only download preference with mobile-data
- * messaging, and empty/loading/network-style status copy. All actions route through the gate-enforced
- * engine. Verified via Robolectric Compose interaction/semantics tests, NOT a screenshot (rendered
- * pixels are unverified in this environment).
+ * Licensed streaming + offline catalogue section. Nigerian-friendly copy with clear DEMO labels.
+ * Stream / Download / Retry / Cancel / offline actions route through the gate-enforced engine.
+ * Renders as a plain Column (not nested LazyColumn) — safe for the single-scrollable accessibility
+ * contract. Switch to LazyColumn if a real catalogue exceeds ~10 rows.
  */
 @Composable
 fun LicensedCatalogSection(
@@ -44,14 +43,14 @@ fun LicensedCatalogSection(
 ) {
   Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
     Text(
-      text = "Licensed & Downloaded",
+      text = "Ready to play",
       style = MaterialTheme.typography.titleMedium,
       fontWeight = FontWeight.Bold,
       color = MornicaEmerald,
     )
     Spacer(modifier = Modifier.height(2.dp))
     Text(
-      text = "Labeled licensed demos. Stream now, or save offline when rights allow.",
+      text = "Stream now or save offline · DEMO tracks clearly labelled",
       style = MaterialTheme.typography.bodySmall,
       color = MornicaTextMuted,
     )
@@ -70,7 +69,7 @@ fun LicensedCatalogSection(
       )
       Column {
         Text(
-          text = "Wi-Fi only for downloads",
+          text = "Wi-Fi downloads",
           style = MaterialTheme.typography.bodyMedium,
           color = MornicaTextLight,
           fontWeight = FontWeight.SemiBold,
@@ -78,9 +77,9 @@ fun LicensedCatalogSection(
         Text(
           text =
             if (uiState.preferWifiOnlyDownloads) {
-              "Downloading pauses on mobile data."
+              "Saves your mobile data"
             } else {
-              "May use mobile data (Wi-Fi-only saves MB)."
+              "May use mobile data"
             },
           style = MaterialTheme.typography.bodySmall,
           color = MornicaTextMuted,
@@ -92,7 +91,7 @@ fun LicensedCatalogSection(
     val downloadedCount = uiState.catalogDownloadStates.count { it.value == CatalogDownloadState.COMPLETED }
     if (downloadedCount > 0) {
       Text(
-        text = "$downloadedCount downloaded · ready offline",
+        text = if (downloadedCount == 1) "1 track saved · ready offline" else "$downloadedCount tracks saved · ready offline",
         style = MaterialTheme.typography.labelMedium,
         color = MornicaCyan,
       )
@@ -101,7 +100,7 @@ fun LicensedCatalogSection(
 
     if (uiState.catalogTracks.isEmpty()) {
       Text(
-        text = "No licensed tracks available yet. Check back soon.",
+        text = "No tracks available yet — check back soon",
         style = MaterialTheme.typography.bodyMedium,
         color = MornicaTextMuted,
       )
@@ -167,21 +166,21 @@ private fun LicensedCatalogTrackCard(
           colors = ButtonDefaults.buttonColors(containerColor = MornicaEmerald),
           shape = RoundedCornerShape(10.dp),
         ) {
-          Text(if (isOfflineReady || downloadState == CatalogDownloadState.COMPLETED) "Play" else "Stream",
-            color = Color(0xFF04130E), fontWeight = FontWeight.Bold)
+          Text(if (isOfflineReady) "Play" else "Stream",
+            color = Color(0xFF071321), fontWeight = FontWeight.Bold)
         }
         when {
           // Streaming-only tracks (no offline entitlement) NEVER show a download or cancel
           // control: the download would only be refused by the rights gate, so it is made
           // visibly unavailable instead of a dead tap.
           !offlineAllowed -> Text(
-            text = "Streaming only · offline not licensed",
+            text = "Streaming only",
             style = MaterialTheme.typography.labelMedium,
             color = MornicaTextMuted,
-            maxLines = 2,
+            maxLines = 1,
           )
-          isOfflineReady || downloadState == CatalogDownloadState.COMPLETED -> TextButton(onClick = onStream) {
-            Text("Offline ready", color = MornicaCyan, fontWeight = FontWeight.Bold)
+          isOfflineReady -> TextButton(onClick = onStream) {
+            Text("Ready offline", color = MornicaCyan, fontWeight = FontWeight.Bold)
           }
           downloadState == CatalogDownloadState.QUEUED ||
             downloadState == CatalogDownloadState.DOWNLOADING -> {
@@ -189,10 +188,10 @@ private fun LicensedCatalogTrackCard(
             TextButton(onClick = onCancel) { Text("Cancel", color = MornicaTextMuted) }
           }
           downloadState == CatalogDownloadState.FAILED -> TextButton(onClick = onDownload) {
-            Text("Retry download", color = MornicaAmberStart, fontWeight = FontWeight.Bold)
+            Text("Retry", color = MornicaAmberStart, fontWeight = FontWeight.Bold)
           }
           else -> TextButton(onClick = onDownload) {
-            Text("Download for later", color = MornicaEmerald, fontWeight = FontWeight.Bold)
+            Text("Save offline", color = MornicaEmerald, fontWeight = FontWeight.Bold)
           }
         }
       }

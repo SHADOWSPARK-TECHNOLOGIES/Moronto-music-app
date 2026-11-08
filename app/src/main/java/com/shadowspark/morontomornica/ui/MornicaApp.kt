@@ -294,7 +294,7 @@ private fun MorontoTopHeader(
           }
           Column(modifier = Modifier.weight(1f)) {
             Text(
-              text = "Mornica Music",
+              text = "Mornica",
               style = MaterialTheme.typography.titleLarge,
               fontWeight = FontWeight.ExtraBold,
               color = MornicaTextLight,
@@ -303,10 +303,10 @@ private fun MorontoTopHeader(
               overflow = TextOverflow.Ellipsis,
             )
             Text(
-              text = "by ShadowSpark Technologies ⚡",
+              text = "Your music, your way",
               style = MaterialTheme.typography.labelMedium,
-              color = MornicaCyan,
-              fontWeight = FontWeight.SemiBold,
+              color = MornicaTextMuted,
+              fontWeight = FontWeight.Medium,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis,

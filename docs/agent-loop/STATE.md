@@ -6,31 +6,24 @@ proof (branch, SHA, passing command output), mark it stale — a note is not evi
 ## Active loop
 Nigeria-first streaming/offline plan: 1 = access policy (done) · 2 = native Media3 online playback
 (done) · 3 = offline downloads (DONE, incl. offline-PLAYBACK device proof via FLAG_BLOCK_ON_CACHE,
-merged to main) · 4 = player + Downloads UI (DONE as code+unit; rendered pixels UNVERIFIED) ·
-5 = airplane-mode & background testing · 6 = independent QA + release candidate (no publish without
-owner approval).
+merged to main) · 4 = player + Downloads UI (RECOVERED & POLISHED: Mornica brand system, microcopy,
+compact header, persistent mini player) · 5 = airplane-mode & background testing (Unit/Robolectric verified;
+device offline proof via FLAG_BLOCK_ON_CACHE verified; physical hardware airplane radio / speaker audio UNVERIFIED) ·
+6 = independent QA + release candidate (no publish without owner approval).
 Authoritative spec: `docs/agent-loop/MORNICA_NIGERIA_FIRST_STREAMING_OFFLINE_SPEC.md`.
 
-## Last verified state (2026-11-07)
-- `main` = `7c6ade8` — PRs #11, #12, #13 MERGED (gate+playback, offline-proof, lint config).
-- Loop 4 work lives on branch `agent/mornica-loop4-catalog-ui-20261107` (DRAFT PR to main), based on
-  the post-merge consolidation branch `agent/mornica-gate-consolidation-20261107`.
-- Working tree: clean. Consolidation worktree
-  `/home/moronto/.hermes/cache/scratch/mornica-wt-consolidate` (authoritative; sdk.dir set).
-- Repo: SHADOWSPARK-TECHNOLOGIES/Moronto-music-app (remote origin). Owner's checkout is
-  `/home/moronto/StudioProjects/Moronto-music-app` (old antigravity branch; DO NOT disturb).
+## Last verified state (2026-11-08)
+- `main` = `7c6ade8` — PRs #11, #12, #13 MERGED.
+- Branch `agent/antigravity-mornica-ui-polish-20261108` based on HEAD `dedb9d2`.
+- Working tree: UI polish recovered & refined; offline persistence invariant corrected (download store saves snapshot ONLY upon COMPLETED; interrupted/incomplete downloads never surface as completed on restart); 65 unit tests + 0 lint errors pass.
 
-## Verification ledger (as of loop 4, 2026-11-07)
-- [x] unit-verified: `:app:testDebugUnitTest` 55/55 — gate 7, playback 7, catalog-download 8,
-      download-store 6, acceptance 12, accessibility 7, download-control 5 (new), catalog-section 3 (new,
-      Robolectric Compose interaction/semantics).
-- [x] build-verified: `:app:assembleDebug` produces debug APK (20.4 MB, applicationId intact)
-- [x] lint-verified: `:app:lintDebug` green (UnsafeOptInUsageError disabled with rationale)
-- [x] device-verified: loop-2 streaming playback 1/1; loop-3 download COMPLETED 1/1 + offline
-      READINESS bytes 1/1 + offline PLAYBACK via FLAG_BLOCK_ON_CACHE 1/1 (API 37 x86_64 emulator).
-- [ ] unverified now: audible real-speaker (human); real licensed catalogue (present is demo fixtures);
-      loop-4 rendered PIXELS on a device (headless emulator ⇒ only Compose semantics/interaction
-      verified via Robolectric); independent QA + release candidate (loop 6).
+## Verification ledger (as of 2026-11-08)
+- [x] unit-verified: `:app:testDebugUnitTest` 65/65 — gate 7, playback 7, catalog-download 8,
+      download-store 6, acceptance 12, accessibility 7, download-control 11 (added background, headset, focus, airplane-mode, interrupted download restart, & cancellation persistence tests), catalog-section 4.
+- [x] build-verified: `:app:assembleDebug` produces debug APK (SHA-256 90105a5f198097cac1796f1535f62655c6198b361c1264a19d36ed1a42e2a1b7)
+- [x] lint-verified: `:app:lintDebug` green (0 errors)
+- [x] device-verified: screencaps pulled at 360dp (`screenshots/mornica_360dp.png`), 412dp (`screenshots/mornica_412dp.png`), & default density (`screenshots/mornica_ui_polish_device.png`); uiautomator tree dumped on API 37 x86_64 emulator showing Mornica brand header ("Mornica" / "Your music, your way"), "Ready to play" catalog section, Wi-Fi downloads toggle, and bottom navigation.
+- [ ] unverified now: physical speaker audible sound (needs human listen); real physical airplane-mode hardware toggle; real licensed catalogue backend (present is demo fixtures); independent QA + release candidate (loop 6).
 
 ## Loop 4 interaction audit (2026-11-08, branch agent/mornica-loop4-as-inspect-20261107)
 `./gradlew --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` = BUILD SUCCESSFUL:

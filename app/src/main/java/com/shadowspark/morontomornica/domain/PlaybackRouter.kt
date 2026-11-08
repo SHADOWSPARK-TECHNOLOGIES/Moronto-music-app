@@ -332,9 +332,9 @@ class PlaybackRouter(
 
   /**
    * Loop 3: request an authorized offline download. The fail-closed CatalogAccess gate
-   * (SAVE_OFFLINE) runs FIRST; only an ALLOW is enqueued and recorded. Denials surface a
-   * reason and never reach the downloader. A stream-only / expired / unverified /
-   * out-of-territory track is refused here.
+   * (SAVE_OFFLINE) runs FIRST; only an ALLOW is enqueued. Denials surface a reason and
+   * never reach the downloader. A stream-only / expired / unverified / out-of-territory track
+   * is refused here. The rights snapshot is persisted ONLY upon verified download completion.
    */
   fun requestCatalogDownload(track: LicensedCatalogTrack): Boolean {
     val manager = catalogDownloadManager
@@ -349,8 +349,6 @@ class PlaybackRouter(
       }
       return false
     }
-    val territory = territoryProvider()
-    downloadStore?.save(DownloadRecord.fromTrack(track, territory, System.currentTimeMillis()))
     _state.update { current ->
       current.copy(
         catalogDownloadStates = current.catalogDownloadStates + (track.id to CatalogDownloadState.QUEUED),
@@ -363,7 +361,8 @@ class PlaybackRouter(
 
   /** Whether any downloaded bytes for this track may be played offline RIGHT NOW (fail-closed). */
   fun offlinePlaybackAllowed(track: LicensedCatalogTrack): Boolean =
-    downloadStore?.get(track.id)?.mayPlayOffline(territoryProvider(), System.currentTimeMillis()) ?: false
+    _state.value.catalogDownloadStates[track.id] == CatalogDownloadState.COMPLETED &&
+      (downloadStore?.get(track.id)?.mayPlayOffline(territoryProvider(), System.currentTimeMillis()) ?: false)
 
   /** Attach/refresh the app-level download controller (cancel + Wi-Fi-only). Injectable for tests. */
   fun attachDownloadController(controller: CatalogDownloadController?) {
@@ -379,15 +378,14 @@ class PlaybackRouter(
   /** Attach the persisted rights-snapshot store so a completed download surfaces as "Offline ready". */
   fun attachDownloadStore(store: DownloadStore?) {
     downloadStore = store
-    // Re-hydrate any already-owned records from a store produced by a previous process/session.
     val storeNow = store ?: return
     val existing = storeNow.all().associateBy { it.trackId }
     if (existing.isEmpty()) return
     _state.update { current ->
       var states = current.catalogDownloadStates
-      existing.keys.forEach { trackId ->
-        if (current.catalogDownloadStates[trackId] != CatalogDownloadState.COMPLETED) {
-          states = states + (trackId to CatalogDownloadState.COMPLETED)
+      existing.values.forEach { record ->
+        if (record.mayPlayOffline(territoryProvider(), System.currentTimeMillis())) {
+          states = states + (record.trackId to CatalogDownloadState.COMPLETED)
         }
       }
       current.copy(catalogDownloadStates = states)
@@ -397,13 +395,14 @@ class PlaybackRouter(
   /**
    * The DownloadManager reports a catalogue download's state change (completion/failure). On
    * COMPLETED a rights-snapshot record is persisted so `offlinePlaybackAllowed` becomes true and
-   * the card can show "Offline ready"; FAILED surfaces retry. Called from the host's DownloadManager
-   * listener, not from the UI thread's optimistic path.
+   * the card can show "Offline ready"; FAILED / cancel cleans up any stale record.
    */
   fun onDownloadStateChanged(trackId: String, state: CatalogDownloadState) {
     if (state == CatalogDownloadState.COMPLETED) {
       val track = _state.value.catalogTracks.find { it.id == trackId } ?: return
       downloadStore?.save(DownloadRecord.fromTrack(track, territoryProvider(), System.currentTimeMillis()))
+    } else if (state == CatalogDownloadState.FAILED) {
+      downloadStore?.remove(trackId)
     }
     _state.update {
       it.copy(catalogDownloadStates = it.catalogDownloadStates + (trackId to state))
@@ -428,6 +427,7 @@ class PlaybackRouter(
     val track = _state.value.catalogTracks.find { it.id == trackId } ?: return false
     val handled = catalogDownloadController?.cancelDownload(track.toMediaId()) ?: false
     if (handled) {
+      downloadStore?.remove(trackId)
       _state.update {
         it.copy(
           catalogDownloadStates = it.catalogDownloadStates - trackId,
@@ -1088,8 +1088,9 @@ object MornicaRuntime {
     val real = CatalogDownloads.realDownloadManager(context)
     // Offline-Ready wiring: persist the rights snapshot and reflect DownloadManager completion in the
     // UI, so a finished download flips the card to "Offline ready" and `offlinePlaybackAllowed` returns
-    // true (previously the downloadStore stayed null at runtime and the state never left "Downloading…").
-    router.attachDownloadStore(buildDownloadStore(context))
+    // true.
+    val store = buildDownloadStore(context)
+    router.attachDownloadStore(store)
     real.addListener(
       object : DownloadManager.Listener {
         override fun onDownloadChanged(
@@ -1101,9 +1102,6 @@ object MornicaRuntime {
           if (!id.startsWith(PlaybackRouter.CATALOG_MEDIA_ID_PREFIX)) return
           val trackId = id.removePrefix(PlaybackRouter.CATALOG_MEDIA_ID_PREFIX)
           when (download.state) {
-            // Only terminal states drive the UI transition; queued/downloading is already surfaced by
-            // requestCatalogDownload, and cancel/removing events are intentionally ignored so the card
-            // reverts to "Download for later" via cancelCatalogDownload's explicit state removal.
             Download.STATE_COMPLETED -> router.onDownloadStateChanged(trackId, CatalogDownloadState.COMPLETED)
             Download.STATE_FAILED -> router.onDownloadStateChanged(trackId, CatalogDownloadState.FAILED)
             else -> Unit
@@ -1111,22 +1109,32 @@ object MornicaRuntime {
         }
       },
     )
-    // Reconcile downloads that already completed in a previous process (Media3 persists the index):
-    // mark them COMPLETED and persist the rights snapshot so "Offline ready" survives app restart.
+    // Reconcile download store against real Media3 DownloadIndex: purge stale/incomplete records
+    // from store if not in STATE_COMPLETED in Media3, and mark valid completed downloads as COMPLETED.
     runCatching {
-      val completed = real.downloadIndex.getDownloads(Download.STATE_COMPLETED)
+      val completedMediaIds = mutableSetOf<String>()
+      val cursor = real.downloadIndex.getDownloads(Download.STATE_COMPLETED)
       try {
-        while (completed.moveToNext()) {
-          val d = completed.getDownload()
+        while (cursor.moveToNext()) {
+          val d = cursor.getDownload()
           if (d.request.id.startsWith(PlaybackRouter.CATALOG_MEDIA_ID_PREFIX)) {
-            router.onDownloadStateChanged(
-              d.request.id.removePrefix(PlaybackRouter.CATALOG_MEDIA_ID_PREFIX),
-              CatalogDownloadState.COMPLETED,
-            )
+            completedMediaIds.add(d.request.id.removePrefix(PlaybackRouter.CATALOG_MEDIA_ID_PREFIX))
           }
         }
       } finally {
-        completed.close()
+        cursor.close()
+      }
+
+      // Purge any stored records that are NOT completed in Media3's index
+      store.all().forEach { record ->
+        if (!completedMediaIds.contains(record.trackId)) {
+          store.remove(record.trackId)
+        }
+      }
+
+      // Update router state for truly completed downloads
+      completedMediaIds.forEach { trackId ->
+        router.onDownloadStateChanged(trackId, CatalogDownloadState.COMPLETED)
       }
     }
     router.attachCatalogDownloadManager(
