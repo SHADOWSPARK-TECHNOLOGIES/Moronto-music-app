@@ -15,6 +15,8 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.offline.Download
+import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.exoplayer.scheduler.Requirements
@@ -114,7 +116,7 @@ class PlaybackRouter(
   private val catalogRights: LicensedCatalogRights = LicensedCatalogConfig.demoRights(),
   private val territoryProvider: () -> String = { "NG" },
   private var catalogDownloadManager: CatalogDownloadManager? = null,
-  private val downloadStore: DownloadStore? = null,
+  private var downloadStore: DownloadStore? = null,
   private var catalogDownloadController: CatalogDownloadController? = null,
   private val onLocalAudioCommand: ((LocalMediaTrack?, Boolean) -> Unit)? = null,
   private var localAudioController: LocalAudioController? = null,
@@ -374,6 +376,40 @@ class PlaybackRouter(
     catalogDownloadManager = manager
   }
 
+  /** Attach the persisted rights-snapshot store so a completed download surfaces as "Offline ready". */
+  fun attachDownloadStore(store: DownloadStore?) {
+    downloadStore = store
+    // Re-hydrate any already-owned records from a store produced by a previous process/session.
+    val storeNow = store ?: return
+    val existing = storeNow.all().associateBy { it.trackId }
+    if (existing.isEmpty()) return
+    _state.update { current ->
+      var states = current.catalogDownloadStates
+      existing.keys.forEach { trackId ->
+        if (current.catalogDownloadStates[trackId] != CatalogDownloadState.COMPLETED) {
+          states = states + (trackId to CatalogDownloadState.COMPLETED)
+        }
+      }
+      current.copy(catalogDownloadStates = states)
+    }
+  }
+
+  /**
+   * The DownloadManager reports a catalogue download's state change (completion/failure). On
+   * COMPLETED a rights-snapshot record is persisted so `offlinePlaybackAllowed` becomes true and
+   * the card can show "Offline ready"; FAILED surfaces retry. Called from the host's DownloadManager
+   * listener, not from the UI thread's optimistic path.
+   */
+  fun onDownloadStateChanged(trackId: String, state: CatalogDownloadState) {
+    if (state == CatalogDownloadState.COMPLETED) {
+      val track = _state.value.catalogTracks.find { it.id == trackId } ?: return
+      downloadStore?.save(DownloadRecord.fromTrack(track, territoryProvider(), System.currentTimeMillis()))
+    }
+    _state.update {
+      it.copy(catalogDownloadStates = it.catalogDownloadStates + (trackId to state))
+    }
+  }
+
   /** Wi-Fi-only download preference: persists in state, enforces the live requirement, messages the user. */
   fun setWifiOnlyDownloads(enabled: Boolean) {
     catalogDownloadController?.setWifiOnlyDownload(enabled)
@@ -404,12 +440,18 @@ class PlaybackRouter(
 
   fun toggleLocalPlayPause() {
     val current = _state.value
+    val catalogActive = current.activeCatalogTrack != null
     val targetTrack =
-      current.activeLocalTrack ?: current.localTracks.firstOrNull { it.isPlayableOffline() }
-    if (targetTrack == null) return
-
-    if (current.activeLocalTrack == null) {
-      playLocalTrack(targetTrack)
+      if (!catalogActive) {
+        current.activeLocalTrack ?: current.localTracks.firstOrNull { it.isPlayableOffline() }
+      } else {
+        current.activeLocalTrack
+      }
+    // Without any active engine and no playable local fallback, there is nothing to toggle.
+    if (!catalogActive && targetTrack == null) return
+    // First play on the local engine boots the first playable track.
+    if (!catalogActive && current.activeLocalTrack == null) {
+      targetTrack?.let { playLocalTrack(it) }
       return
     }
 
@@ -418,7 +460,14 @@ class PlaybackRouter(
     localAudioController?.setPlayWhenReady(nextPlaying)
     _state.update {
       it.copy(
-        activeEngine = if (nextPlaying) ActiveEngine.LOCAL_AUDIO else it.activeEngine,
+        activeEngine =
+          if (nextPlaying) {
+            // Resume the engine that's actually active: never relabel a licensed catalog
+            // stream as LOCAL_AUDIO (that would mislabel the persistent player).
+            if (catalogActive) it.activeEngine else ActiveEngine.LOCAL_AUDIO
+          } else {
+            it.activeEngine
+          },
         isLocalPlaying = nextPlaying,
         playbackError = if (nextPlaying) null else it.playbackError,
         isYouTubeEmbedPlaying = if (nextPlaying) false else it.isYouTubeEmbedPlaying,
@@ -1037,6 +1086,49 @@ object MornicaRuntime {
       ContextCompat.startForegroundService(context, intent)
     }
     val real = CatalogDownloads.realDownloadManager(context)
+    // Offline-Ready wiring: persist the rights snapshot and reflect DownloadManager completion in the
+    // UI, so a finished download flips the card to "Offline ready" and `offlinePlaybackAllowed` returns
+    // true (previously the downloadStore stayed null at runtime and the state never left "Downloading…").
+    router.attachDownloadStore(buildDownloadStore(context))
+    real.addListener(
+      object : DownloadManager.Listener {
+        override fun onDownloadChanged(
+          manager: DownloadManager,
+          download: Download,
+          exception: Exception?,
+        ) {
+          val id = download.request.id
+          if (!id.startsWith(PlaybackRouter.CATALOG_MEDIA_ID_PREFIX)) return
+          val trackId = id.removePrefix(PlaybackRouter.CATALOG_MEDIA_ID_PREFIX)
+          when (download.state) {
+            // Only terminal states drive the UI transition; queued/downloading is already surfaced by
+            // requestCatalogDownload, and cancel/removing events are intentionally ignored so the card
+            // reverts to "Download for later" via cancelCatalogDownload's explicit state removal.
+            Download.STATE_COMPLETED -> router.onDownloadStateChanged(trackId, CatalogDownloadState.COMPLETED)
+            Download.STATE_FAILED -> router.onDownloadStateChanged(trackId, CatalogDownloadState.FAILED)
+            else -> Unit
+          }
+        }
+      },
+    )
+    // Reconcile downloads that already completed in a previous process (Media3 persists the index):
+    // mark them COMPLETED and persist the rights snapshot so "Offline ready" survives app restart.
+    runCatching {
+      val completed = real.downloadIndex.getDownloads(Download.STATE_COMPLETED)
+      try {
+        while (completed.moveToNext()) {
+          val d = completed.getDownload()
+          if (d.request.id.startsWith(PlaybackRouter.CATALOG_MEDIA_ID_PREFIX)) {
+            router.onDownloadStateChanged(
+              d.request.id.removePrefix(PlaybackRouter.CATALOG_MEDIA_ID_PREFIX),
+              CatalogDownloadState.COMPLETED,
+            )
+          }
+        }
+      } finally {
+        completed.close()
+      }
+    }
     router.attachCatalogDownloadManager(
       CatalogDownloadManager(
         rights = LicensedCatalogConfig.demoRights(),

@@ -4,12 +4,15 @@ import com.shadowspark.morontomornica.domain.CatalogDownloadController
 import com.shadowspark.morontomornica.domain.CatalogDownloadManager
 import com.shadowspark.morontomornica.domain.CatalogDownloadState
 import com.shadowspark.morontomornica.domain.DemoCatalogSource
+import com.shadowspark.morontomornica.domain.DownloadRecord
+import com.shadowspark.morontomornica.domain.InMemoryDownloadStore
 import com.shadowspark.morontomornica.domain.LicensedCatalogConfig
 import com.shadowspark.morontomornica.domain.LicensedCatalogRights
 import com.shadowspark.morontomornica.domain.MornicaUiState
 import com.shadowspark.morontomornica.domain.PlaybackRouter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -99,5 +102,51 @@ class CatalogDownloadControlTest {
       CatalogDownloadState.QUEUED,
       router.state.value.catalogDownloadStates[t.id],
     )
+  }
+
+  @Test
+  fun onCompletedDownloadPersistsSnapshotAndEnablesOfflinePlayback() {
+    val store = InMemoryDownloadStore()
+    val router = PlaybackRouter().apply { attachDownloadStore(store) }
+    val t = track() // offlineAllowed demo track
+    assertFalse("not downloaded yet", router.offlinePlaybackAllowed(t))
+
+    router.onDownloadStateChanged(t.id, CatalogDownloadState.COMPLETED)
+
+    assertEquals(
+      CatalogDownloadState.COMPLETED,
+      router.state.value.catalogDownloadStates[t.id],
+    )
+    assertNotNull("rights snapshot must be persisted on completion", store.get(t.id))
+    assertTrue(
+      "a completed download must now be playable offline (fail-closed snapshot valid)",
+      router.offlinePlaybackAllowed(t),
+    )
+  }
+
+  @Test
+  fun onFailedDownloadSurfacesRetryWithoutOfflineEntitlement() {
+    val router = PlaybackRouter().apply { attachDownloadStore(InMemoryDownloadStore()) }
+    val t = track()
+    router.onDownloadStateChanged(t.id, CatalogDownloadState.FAILED)
+
+    assertEquals(CatalogDownloadState.FAILED, router.state.value.catalogDownloadStates[t.id])
+    assertFalse("a failed download must NOT enable offline playback", router.offlinePlaybackAllowed(t))
+  }
+
+  @Test
+  fun attachDownloadStoreRehydratesCompletedStates() {
+    val t = track()
+    val store = InMemoryDownloadStore()
+    store.save(DownloadRecord.fromTrack(t, "NG", System.currentTimeMillis()))
+
+    val router = PlaybackRouter().apply { attachDownloadStore(store) }
+
+    assertEquals(
+      "a store record from a previous session must surface as Offline ready",
+      CatalogDownloadState.COMPLETED,
+      router.state.value.catalogDownloadStates[t.id],
+    )
+    assertTrue(router.offlinePlaybackAllowed(t))
   }
 }

@@ -42,7 +42,7 @@ fun LicensedCatalogSection(
   uiState: MornicaUiState,
   router: PlaybackRouter,
 ) {
-  Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp)) {
+  Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
     Text(
       text = "Licensed & Downloaded",
       style = MaterialTheme.typography.titleMedium,
@@ -51,17 +51,11 @@ fun LicensedCatalogSection(
     )
     Spacer(modifier = Modifier.height(2.dp))
     Text(
-      text = "Fresh Naija sounds, one place. No data? No wahala — your saved music still dey.",
-      style = MaterialTheme.typography.bodyMedium,
-      color = MornicaTextMuted,
-    )
-    Spacer(modifier = Modifier.height(6.dp))
-    Text(
-      text = "Demo previews are labeled DEMO. Only tracks that pass the rights gate can stream or save offline.",
+      text = "Labeled licensed demos. Stream now, or save offline when rights allow.",
       style = MaterialTheme.typography.bodySmall,
       color = MornicaTextMuted,
     )
-    Spacer(modifier = Modifier.height(10.dp))
+    Spacer(modifier = Modifier.height(8.dp))
 
     // Wi-Fi-only download preference + mobile-data messaging.
     Row(
@@ -84,16 +78,16 @@ fun LicensedCatalogSection(
         Text(
           text =
             if (uiState.preferWifiOnlyDownloads) {
-              "Downloads stop on mobile data. Your MB no dey waste."
+              "Downloading pauses on mobile data."
             } else {
-              "Downloads can use mobile data. Use Wi-Fi-only to save data."
+              "May use mobile data (Wi-Fi-only saves MB)."
             },
           style = MaterialTheme.typography.bodySmall,
           color = MornicaTextMuted,
         )
       }
     }
-    Spacer(modifier = Modifier.height(12.dp))
+    Spacer(modifier = Modifier.height(10.dp))
 
     val downloadedCount = uiState.catalogDownloadStates.count { it.value == CatalogDownloadState.COMPLETED }
     if (downloadedCount > 0) {
@@ -122,6 +116,7 @@ fun LicensedCatalogSection(
         track = track,
         downloadState = uiState.catalogDownloadStates[track.id] ?: CatalogDownloadState.NONE,
         isOfflineReady = router.offlinePlaybackAllowed(track),
+        offlineAllowed = track.offlineAllowed,
         onStream = { router.playCatalogTrack(track) },
         onDownload = { router.requestCatalogDownload(track) },
         onCancel = { router.cancelCatalogDownload(track.id) },
@@ -135,6 +130,7 @@ private fun LicensedCatalogTrackCard(
   track: LicensedCatalogTrack,
   downloadState: CatalogDownloadState,
   isOfflineReady: Boolean,
+  offlineAllowed: Boolean,
   onStream: () -> Unit,
   onDownload: () -> Unit,
   onCancel: () -> Unit,
@@ -175,6 +171,15 @@ private fun LicensedCatalogTrackCard(
             color = Color(0xFF04130E), fontWeight = FontWeight.Bold)
         }
         when {
+          // Streaming-only tracks (no offline entitlement) NEVER show a download or cancel
+          // control: the download would only be refused by the rights gate, so it is made
+          // visibly unavailable instead of a dead tap.
+          !offlineAllowed -> Text(
+            text = "Streaming only · offline not licensed",
+            style = MaterialTheme.typography.labelMedium,
+            color = MornicaTextMuted,
+            maxLines = 2,
+          )
           isOfflineReady || downloadState == CatalogDownloadState.COMPLETED -> TextButton(onClick = onStream) {
             Text("Offline ready", color = MornicaCyan, fontWeight = FontWeight.Bold)
           }

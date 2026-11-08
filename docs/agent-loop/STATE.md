@@ -32,6 +32,39 @@ Authoritative spec: `docs/agent-loop/MORNICA_NIGERIA_FIRST_STREAMING_OFFLINE_SPE
       loop-4 rendered PIXELS on a device (headless emulator ⇒ only Compose semantics/interaction
       verified via Robolectric); independent QA + release candidate (loop 6).
 
+## Loop 4 interaction audit (2026-11-08, branch agent/mornica-loop4-as-inspect-20261107)
+`./gradlew --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` = BUILD SUCCESSFUL:
+**56/56 unit tests** (added `LicensedCatalogSectionTest.streamOnlyTrackHidesDownloadControl`),
+**0 lint errors** (35 warnings: GradleDependency/UseKtx/NewerVersion/UnusedResources/MonochromeIcon/
+OldTargetApi/ObsoleteSdkInt), debug APK 20.4 MB.
+Device (API 36/37 x86_64 emulator, `Medium_Phone`, 1080x2400@420 = ~411dp, headless, ADB-driven):
+- [x] device-verified bottom nav: Explore Videos (external-YouTube cards, no embed), Creator Hub,
+      My Music — all 3 reachable; evidence screenshots under `screenshots/audit-20261108/`.
+- [x] device-verified library tabs ×5: Tracks/Queues/Albums/Artists/Folders switch content
+      (Queue · Afrobeats Offline Queue / Album · Mornica Creator Sessions / Artist · Teniola Blaze /
+      Folder · Mornica Demos).
+- [x] device-verified Stream: banner "Streaming licensed demo…"; MediaSession logged PLAYING(3)
+      progressing 0:00→0:21+ on the live SoundHelix source (audio focus + ExoPlayer Init).
+- [x] device-verified persistent player: catalog playback now shows the mini player (my fix:
+      bottom-bar shows when activeCatalogTrack != null) — "Demo Afrobeats Instrumental · 0:53 / 6:12".
+- [x] device-verified Download: tap "Download for later" → banner "Download queued for offline" +
+      CatalogDownloadService foreground service started + button → "Downloading…"/"Cancel".
+- [x] device-verified Cancel: tap Cancel → banner "Download cancelled…" + CatalogDownloadService
+      FGS stopped + button reverts to "Download for later".
+- [x] device-verified streaming-only download control hidden: "Demo Streaming-Only Track" shows
+      "Streaming only · offline not licensed" and NO download/cancel control (my fix).
+- [x] device-verified Back: Creator Hub → My Music (app stays foreground); My Music home (sheet
+      collapsed) → system default, foreground becomes launcher (app exits).
+- [ ] OFFline REady runtime gap (DEVICE BLOCKED): a completed download does NOT flip the card to
+      "Offline ready" / "downloaded · ready offline". Root cause: `MornicaRuntime.router` builds
+      `PlaybackRouter` WITHOUT a `downloadStore` (ctor default null) and nothing observes
+      DownloadManager completion to set `catalogDownloadStates[id]=COMPLETED`. So
+      `offlinePlaybackAllowed` is always false at runtime and the UI stays "Downloading…" forever.
+      The offline pipeline is proven by the Loop-3 instrumented tests, but the running app cannot
+      surface "Offline ready". Needs: persist a real `DownloadStore` + observe
+      `DownloadManager.Listener` completion → update router COMPLETED. NOT implemented (scope).
+
+
 ## Loop 4 implementation notes (important for the next worker)
 - `LicensedCatalogSection` (ui/LicensedCatalogSection.kt) is mounted at the top of My Music. It renders
   as a plain **Column**, intentionally NOT a nested LazyColumn: a second scrollable breaks

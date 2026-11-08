@@ -61,3 +61,40 @@ Next verification: use a trusted Android SDK/dependency-enabled checkout of this
 Recovered the committed accessibility patch into a complete checkout after the temporary parent worktree directory expired. Added `.github/workflows/android-accessibility-checks.yml` on the candidate branch only: unit tests, lint and debug assemble, `contents: read`, SHA-named report artifacts, no release/signing step. Independent source review found no workflow blocker. The existing base-branch workflow still publishes `mornica-latest`; it was not changed or triggered by a base push.
 
 Local Gradle 9.3.1 was recovered again from its pinned-checksum distribution. Standard Java proxy properties derived from the existing proxy environment allow task configuration to start; this is not yet a compilation or test result. Android SDK availability and package setup remain unresolved. Do not interpret a prepared workflow or artifact definition as a hosted pass or installable APK.
+
+## 2026-11-08 — Loop-4 interaction audit (branch agent/mornica-loop4-as-inspect-20261107)
+
+Green verification run: `./gradlew --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` =
+BUILD SUCCESSFUL. **56/56 unit tests**, **0 lint errors** (35 warnings all informational:
+GradleDependency/UseKtx/NewerVersionAvailable/UnusedResources/MonochromeLauncherIcon/OldTargetApi/
+ObsoleteSdkInt/AndroidGradlePluginVersion), debug APK 20.4 MB produced.
+
+Scoped UI changes (unit-tested, live-verified on emulator):
+- `ui/LicensedCatalogSection.kt`: streaming-only tracks (offline NOT authorized) now render a muted
+  "Streaming only · offline not licensed" label instead of a download/cancel control (no dead tap).
+  Cut the two-paragraph intro to one subtitle line; tightened the Wi-Fi-only helper copy and spacing.
+- `ui/MornicaApp.kt`: added `BackHandler` (expandable Now Playing sheet collapsed first, then return to
+  My Music; disabled on the My Music home so system Back/exit still applies). The persistent mini player
+  now also renders when a licensed-catalog track is active (previously it only appeared for local tracks).
+- `domain/PlaybackRouter.kt`: `toggleLocalPlayPause()` is now engine-aware (resuming a playing catalog
+  stream keeps `ActiveEngine.LICENSED_CATALOG` instead of relabelling it LOCAL_AUDIO).
+
+On-device interaction audit (headless emulator, ADB uiautomator + taps + screencap/logcat; evidence PNGs
+in `screenshots/audit-20261108/`):
+- VERIFIED bottom nav on all 3 screens (Explore Videos external-YouTube cards, Creator Hub, My Music).
+- VERIFIED all 5 library tabs switch content.
+- VERIFIED Stream reaches a real PLAYING state on the live source (MediaSession position advanced
+  0:00→0:21+; audio focus + ExoPlayer Init logged).
+- VERIFIED persistent mini player shows for catalog playback ("… · 0:53 / 6:12").
+- VERIFIED Download: queued banner + CatalogDownloadService FGS started + button → "Downloading…/Cancel".
+- VERIFIED Cancel: cancelled banner + service FGS stopped + revert to "Download for later".
+- VERIFIED streaming-only track exposes no download/cancel control.
+- VERIFIED Back: Creator Hub → My Music; My Music home Back → launcher (app exits).
+- BLOCKED on device — "Offline ready": a completed download never flips the card. Root cause:
+  `MornicaRuntime.router` builds `PlaybackRouter` without a `downloadStore` (ctor default null) and no
+  code observes DownloadManager completion to set `catalogDownloadStates[id]=COMPLETED`, so
+  `offlinePlaybackAllowed` is always false at runtime and the card stays "Downloading…" forever.
+  Offline render/playback is proven only by the Loop-3 instrumented tests. Recommended fix (not in scope
+  here): persist a real `DownloadStore` + observe `DownloadManager.Listener` completion → router
+  COMPLETED. Not merged or published.
+
