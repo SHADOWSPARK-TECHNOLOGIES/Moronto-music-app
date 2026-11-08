@@ -98,6 +98,14 @@ in `screenshots/audit-20261108/`):
   here): persist a real `DownloadStore` + observe `DownloadManager.Listener` completion → router
   COMPLETED. Not merged or published.
 
+  > **HISTORICAL / SUPERSEDED (2026-11-08, Loop-6).** This defect was fixed in the Antigravity UI-polish
+  > branch (`9bf463f`: attachable `downloadStore` + `onDownloadStateChanged` + `DownloadManager.Listener`
+  > completion → `COMPLETED`) and its runtime behaviour was positively re-verified in the Loop-5
+  > airplane-mode proof below. The Loop-6 closure additionally hardened it: "Ready offline" is now gated
+  > by the real Media3 `DownloadIndex` + cache bytes via `OfflineReadinessVerifier` (see the Loop-6
+  > section), so a stored rights snapshot alone can never show ready-offline.
+  > This paragraph is preserved verbatim as historical evidence; do not treat it as current state.
+
 ## 2026-11-08 — Loop-5 airplane-mode offline playback proof (branch agent/antigravity-mornica-ui-polish-20261108)
 
 Took over from the Antigravity UI-polish branch (HEAD `9bf463f`). First re-verified the recorded baseline before
@@ -163,4 +171,61 @@ Reconciled on the PR:
   `UPLOAD_KEY_PASSWORD` and STORE/KEY equivalents all absent; keystore present but unusable). No signed
   release APK/AAB can be produced until the owner supplies credentials. No merge/publish/Play Console action.
   QA audit transcript: `/home/moronto/.hermes/cache/delegation/live/deleg_5a13090e/task-0.log`.
+
+## 2026-11-08 — P0 release-candidate closure (Loop-6 hardened, branch agent/antigravity-mornica-ui-polish-20261108)
+
+Closed the P0 acceptance gates flagged by the independent QA (F1/N3/N2 concerns). Additive change; NOT
+merging/releasing. No signing change, no Play Console action, no secret touch.
+
+**Gate 1+2 — "Ready offline" driven by the REAL Media3 DownloadIndex + cache, not the stored snapshot.**
+- New `domain/OfflineReadinessVerifier.kt`: `OfflineReadinessVerifier` seam + production
+  `Media3OfflineReadinessVerifier` that reads `CatalogDownloads.realDownloadManager(context).downloadIndex`
+  (`Download.STATE_COMPLETED`) AND the shared `MediaCache.cache(context).getCachedBytes(mediaUrl,0,MAX) > 0`.
+  Two defensive `runCatching`s fail closed on any I/O error.
+- `PlaybackRouter`: `offlinePlaybackAllowed()` now requires state COMPLETED + valid stored snapshot AND
+  (when a verifier is attached) genuine index/cache readiness. `attachOfflineReadiness()` re-checks and
+  drops any COMPLETED state the real engine can no longer honour (legacy/interrupted/evicted/corrupt).
+  `attachDownloadStore()` re-hydrates COMPLETED only when the verifier confirms bytes (when attached).
+- New `playDownloadedCatalogTrack()` routes offline play through the `PLAY_DOWNLOADED` gate
+  (`downloadCompleted = true`) and refuses (banner) if not genuinely ready — a COMPLETED state alone can
+  never override a failed offline entitlement.
+- `MornicaRuntime.wireCatalogDownloads()` attaches `OfflineReadinessVerifier.real(context)`.
+- `ui/LicensedCatalogSection.kt`: Play button + "Ready offline" route via `onPlayOffline` →
+  `playDownloadedCatalogTrack`; "N tracks saved" count now uses `offlinePlaybackAllowed(track)` (genuine)
+  not raw COMPLETED map entries.
+- New `OfflineReadinessVerifierTest.kt` (8 tests) covering: legacy record no bytes; stale COMPLETED
+  dropped on attach; verifier-confirm allows; expired rights block even with bytes; legacy-not-ready
+  restart; Play fail-closed when not ready; Play allowed when ready; failed download never ready.
+
+**Verification (Gate 4) — real numbers from this run:**
+- `:app:testDebugUnitTest` = **73/73 pass, 0 fail, 0 error, 0 skipped** (9 classes; +8 new verifier tests).
+- `:app:lintDebug` = **0 errors, 34 warnings** (unchanged informational set).
+- `:app:assembleDebug` = debug APK **sha256 `dad1b417c225836bff81df08db39e402338f29f3deacb94eef7f129a527eed23`**, 20,549,045 B. Source = branch HEAD after this change (to be committed).
+- `:app:connectedDebugAndroidTest -P…class=LicensedCatalogPlaybackInstrumentedTest` = **1 test, 0 failures, 0 errors** on `Medium_Phone` (API-36 emulator).
+- On-device Gate-1 proof (current build): after `-r -g` reinstall (app data reset, so no downloads present,
+  correct fail-closed "Save offline"), drove a real download to completion → card flipped to
+  "1 track saved · ready offline" + "Ready offline"; persisted `no_backup/catalog_downloads.json`;
+  `exoplayer_internal.db` populated. Then disabled Wi-Fi+data (`ping` → Network is unreachable),
+  force-stop + relaunch fully offline → "ready offline" survived restart, tapped Play → `PLAYING(3)` at
+  3.5s with **zero network errors** — bytes genuinely from cache, gated by the real verifier.
+
+**Gate 3 — theme/header/copy preserved; screenshots captured (NOT independently pixel-reviewed).**
+- No change to `MornicaTheme.kt` palette, the `Mornica` header/copy, or Nigerian-friendly strings this
+  closure. Structural uiautomator on the current build confirms brand header ("Mornica" / "Your music,
+  your way"), "Ready to play" section, Wi-Fi downloads toggle, 5 library tabs, bottom nav unchanged.
+- Captured for review: `screenshots/rc_412dp.png`, `screenshots/rc_360dp.png`,
+  `screenshots/rc_360dp_13.png` (1080×2400 each; 412dp@420dpi, 360dp via wm density 480, and 360dp+1.3×
+  font via `settings put system font_scale 1.3`). These are **captured evidence, NOT independently
+  visually reviewed** — the host model is non-multimodal, so pixel-level visual review (incl. 1.3× font
+  legibility) remains UNVERIFIED pending a multimodal/human look.
+
+**Gate 6 — commit + push + DRAFT PR (this authorizes draft-PR prep only, not merge/publish).**
+- Committed the closure on the isolated branch, pushed, and converted/open a DRAFT PR to the correct
+  integration base (PR #14 head, the same chain used by the prior non-draft PR #17). See PR URL / HEAD /
+  APK hash in the completion report.
+
+**Gate 7 — independent review requested.** The isolated offline-readiness change deserves a fresh
+independent pass (Media3 playback-state handling, offline rights, navigation, accessibility, final APK)
+before any release; noted as outstanding. No production merge, release signing, Play upload, or
+alternative-store publication performed.
 

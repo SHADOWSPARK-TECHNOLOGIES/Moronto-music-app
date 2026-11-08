@@ -117,6 +117,7 @@ class PlaybackRouter(
   private val territoryProvider: () -> String = { "NG" },
   private var catalogDownloadManager: CatalogDownloadManager? = null,
   private var downloadStore: DownloadStore? = null,
+  private var offlineReadiness: OfflineReadinessVerifier? = null,
   private var catalogDownloadController: CatalogDownloadController? = null,
   private val onLocalAudioCommand: ((LocalMediaTrack?, Boolean) -> Unit)? = null,
   private var localAudioController: LocalAudioController? = null,
@@ -331,6 +332,56 @@ class PlaybackRouter(
   }
 
   /**
+   * Loop-6 / Play offline: plays a catalogue track strictly from its DOWNLOADED bytes. Unlike
+   * [playCatalogTrack] (which streams over the network through the STREAM gate), this routes
+   * through the PLAY_DOWNLOADED gate and fails closed if the media is not genuinely present in the
+   * real DownloadIndex/cache — so a COMPLETED state alone can never override a failed offline
+   * entitlement or missing bytes. The played MediaItem is served by the shared cache-backed
+   * player, so with the network off it reads the downloaded bytes (no streaming fallback claim).
+   */
+  fun playDownloadedCatalogTrack(track: LicensedCatalogTrack): Boolean {
+    if (!offlinePlaybackAllowed(track)) {
+      _state.update {
+        it.copy(
+          statusBannerMessage =
+            "Not ready offline: '${track.title}' bytes are missing or rights expired.",
+        )
+      }
+      return false
+    }
+    val territory = territoryProvider()
+    val decision =
+      catalogRights.evaluate(
+        track,
+        CatalogAccess.PLAY_DOWNLOADED,
+        territory,
+        downloadCompleted = true,
+      )
+    if (!decision.allowed) {
+      _state.update {
+        it.copy(statusBannerMessage = catalogDenialMessage(decision.denial, track.title))
+      }
+      return false
+    }
+    onLocalAudioCommand?.invoke(null, true)
+    localAudioController?.playMediaItems(listOf(track.toMedia3Item()), startIndex = 0)
+    _state.update {
+      it.copy(
+        activeEngine = ActiveEngine.LICENSED_CATALOG,
+        activeCatalogTrack = track,
+        activeLocalTrack = null,
+        localPositionMs = 0L,
+        playbackError = null,
+        isYouTubeEmbedPlaying = false,
+        activeYouTubeVideo = null,
+        statusBannerMessage =
+          "Playing offline: ${track.title} · ${track.sourceLabel}",
+      )
+    }
+    return true
+  }
+
+  /**
    * Loop 3: request an authorized offline download. The fail-closed CatalogAccess gate
    * (SAVE_OFFLINE) runs FIRST; only an ALLOW is enqueued. Denials surface a reason and
    * never reach the downloader. A stream-only / expired / unverified / out-of-territory track
@@ -359,10 +410,47 @@ class PlaybackRouter(
     return true
   }
 
-  /** Whether any downloaded bytes for this track may be played offline RIGHT NOW (fail-closed). */
-  fun offlinePlaybackAllowed(track: LicensedCatalogTrack): Boolean =
-    _state.value.catalogDownloadStates[track.id] == CatalogDownloadState.COMPLETED &&
-      (downloadStore?.get(track.id)?.mayPlayOffline(territoryProvider(), System.currentTimeMillis()) ?: false)
+  /**
+   * Whether the media for this track is genuinely available offline RIGHT NOW.
+   *
+   * Fail-closed: requires the in-memory COMPLETED flag, a valid stored rights snapshot, AND — when
+   * the production verifier is attached — that the real Media3 DownloadIndex reports the media as
+   * STATE_COMPLETED with positive cache bytes. When no verifier is attached (pure unit-test wiring)
+   * the state+snapshot check governs; production always attaches the real verifier via
+   * [attachOfflineReadiness].
+   */
+  fun offlinePlaybackAllowed(track: LicensedCatalogTrack): Boolean {
+    if (_state.value.catalogDownloadStates[track.id] != CatalogDownloadState.COMPLETED) return false
+    val snapshot =
+      downloadStore?.get(track.id)?.mayPlayOffline(territoryProvider(), System.currentTimeMillis())
+    if (snapshot != true) return false
+    val verifier = offlineReadiness ?: return true
+    return verifier.isGenuinelyReadyForOffline(track)
+  }
+
+  /**
+   * Attach the offline-readiness authority. The production impl reads the real DownloadIndex +
+   * shared cache; attaching it means "Ready offline" / `offlinePlaybackAllowed` can only be true
+   * when the media bytes genuinely exist and are completed in Media3's index (not merely a stored
+   * rights snapshot). After attaching, already-rendered COMPLETED states are re-checked and dropped
+   * if the real store/cache can no longer honour them (legacy record, interrupted download, cache
+   * eviction, corrupt index — all fail closed).
+   */
+  fun attachOfflineReadiness(verifier: OfflineReadinessVerifier?) {
+    offlineReadiness = verifier
+    if (verifier == null) return
+    _state.update { current ->
+      var states = current.catalogDownloadStates
+      current.catalogTracks.forEach { track ->
+        if (states[track.id] == CatalogDownloadState.COMPLETED &&
+          !verifier.isGenuinelyReadyForOffline(track)
+        ) {
+          states = states - track.id
+        }
+      }
+      current.copy(catalogDownloadStates = states)
+    }
+  }
 
   /** Attach/refresh the app-level download controller (cancel + Wi-Fi-only). Injectable for tests. */
   fun attachDownloadController(controller: CatalogDownloadController?) {
@@ -384,7 +472,10 @@ class PlaybackRouter(
     _state.update { current ->
       var states = current.catalogDownloadStates
       existing.values.forEach { record ->
-        if (record.mayPlayOffline(territoryProvider(), System.currentTimeMillis())) {
+        val track = current.catalogTracks.find { it.id == record.trackId }
+        val snapshotOk = record.mayPlayOffline(territoryProvider(), System.currentTimeMillis())
+        val bytesOk = track == null || offlineReadiness?.isGenuinelyReadyForOffline(track) ?: true
+        if (snapshotOk && bytesOk) {
           states = states + (record.trackId to CatalogDownloadState.COMPLETED)
         }
       }
@@ -1091,6 +1182,10 @@ object MornicaRuntime {
     // true.
     val store = buildDownloadStore(context)
     router.attachDownloadStore(store)
+    // Loop-6: attach the REAL offline-readiness authority (Media3 DownloadIndex + shared cache) so
+    // "Ready offline" / offlinePlaybackAllowed are true only when the bytes genuinely exist and are
+    // COMPLETED in the engine's index — never merely because a rights snapshot was stored.
+    router.attachOfflineReadiness(OfflineReadinessVerifier.real(context))
     real.addListener(
       object : DownloadManager.Listener {
         override fun onDownloadChanged(

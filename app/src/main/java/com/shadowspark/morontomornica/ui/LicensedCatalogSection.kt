@@ -88,7 +88,8 @@ fun LicensedCatalogSection(
     }
     Spacer(modifier = Modifier.height(10.dp))
 
-    val downloadedCount = uiState.catalogDownloadStates.count { it.value == CatalogDownloadState.COMPLETED }
+    val downloadedCount =
+      uiState.catalogTracks.count { router.offlinePlaybackAllowed(it) }
     if (downloadedCount > 0) {
       Text(
         text = if (downloadedCount == 1) "1 track saved · ready offline" else "$downloadedCount tracks saved · ready offline",
@@ -117,6 +118,7 @@ fun LicensedCatalogSection(
         isOfflineReady = router.offlinePlaybackAllowed(track),
         offlineAllowed = track.offlineAllowed,
         onStream = { router.playCatalogTrack(track) },
+        onPlayOffline = { router.playDownloadedCatalogTrack(track) },
         onDownload = { router.requestCatalogDownload(track) },
         onCancel = { router.cancelCatalogDownload(track.id) },
       )
@@ -131,6 +133,7 @@ private fun LicensedCatalogTrackCard(
   isOfflineReady: Boolean,
   offlineAllowed: Boolean,
   onStream: () -> Unit,
+  onPlayOffline: () -> Unit,
   onDownload: () -> Unit,
   onCancel: () -> Unit,
 ) {
@@ -162,7 +165,7 @@ private fun LicensedCatalogTrackCard(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
       ) {
         Button(
-          onClick = onStream,
+          onClick = if (isOfflineReady) onPlayOffline else onStream,
           colors = ButtonDefaults.buttonColors(containerColor = MornicaEmerald),
           shape = RoundedCornerShape(10.dp),
         ) {
@@ -179,7 +182,7 @@ private fun LicensedCatalogTrackCard(
             color = MornicaTextMuted,
             maxLines = 1,
           )
-          isOfflineReady -> TextButton(onClick = onStream) {
+          isOfflineReady -> TextButton(onClick = onPlayOffline) {
             Text("Ready offline", color = MornicaCyan, fontWeight = FontWeight.Bold)
           }
           downloadState == CatalogDownloadState.QUEUED ||
