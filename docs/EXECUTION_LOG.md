@@ -133,3 +133,34 @@ MediaSession/logcat, not pixel-reviewed; audible sound on a physical speaker sti
 No code change was required this cycle — this was pure verification of the branch that was previously only
 unit/instrumented-verified. No push/merge/publish.  Physical-device radio toggle remains UNVERIFIED.
 
+## 2026-11-08 — Loop-6 independent QA + release-readiness gate (branch agent/antigravity-mornica-ui-polish-20261108)
+
+Opened **PR #17** (`feat(android): Mornica UI polish + Offline-Ready fix & Loop-5 airplane-mode offline
+proof`) — base `agent/mornica-loop4-catalog-ui-20261107` (PR #14 head) per the repo's chained-PR convention;
+branch↔PR alignment verified (`12a3874` == headRefOid). Pushed `12a3874` (owner-approved). SATISFIED AGENTS.md:
+no automated CI runs on this base (both workflows only trigger on
+`agent/antigravity-mornica-launch-contract-20261019`) — flagged on the PR; verification stands on the
+local run + on-device proof.
+
+Independent skeptical QA subagent (moronto-qa contract, read-only `base..HEAD`, re-ran tests with
+`--rerun-tasks`, did not trust claims) returned **PARTIAL**: code-level PASS, release-level incomplete.
+Reconciled on the PR:
+- Real numbers (QA-observed): **65/65 unit tests / 0 fail / 0 error / 0 skipped**, **lint 0 errors / 34
+  warnings**, debug APK sha256 `3f22b58f…` (20,394,879 B).
+- VERIFIED: repo hygiene (only intended files; no test deletions), rights/provenance (licenseReference
+  only `DEMO-CATALOG-*`, `rightsConfirmed=true` only on demo fixtures, evaluate() default-denies and runs
+  before enqueue/play, YouTube hosts blocked at gate + allowlist `{soundhelix.com}`), no secrets leaked
+  (`YOUTUBE_API_KEY` BuildConfig empty), offline fail-closed (record persisted only on STATE_COMPLETED;
+  reconcile purges non-COMPLETED; cancel/FAILED removes; `offlinePlaybackAllowed` requires COMPLETED +
+  mayPlayOffline).
+- F1 (Play streams via URI-keyed cache, no dedicated offline file-read): addressed empirically by Loop-5
+  device proof; durable instrumented test still requested (future cycle). N3 "no device evidence" corrected
+  (on-device Loop-5 proof on record); multimodal pixel review still pending. N2 `isLocalPlaying` direct-set
+  tension pre-existing (PlaybackRouter.kt :283/:471/:513/:534/:677/:689/:700) — separate AGENTS.md-hardening
+  item, needs owner decision. N4 AGP 9.1.1→9.5.1 / Gradle 9.3.1→9.6.0 from baseline commit `329c74f`, not
+  this change.
+- **Release gate: BLOCKED — signing creds unset** (`UPLOAD_KEYSTORE_ALIAS`/`UPLOAD_KEYSTORE_PASSWORD`/
+  `UPLOAD_KEY_PASSWORD` and STORE/KEY equivalents all absent; keystore present but unusable). No signed
+  release APK/AAB can be produced until the owner supplies credentials. No merge/publish/Play Console action.
+  QA audit transcript: `/home/moronto/.hermes/cache/delegation/live/deleg_5a13090e/task-0.log`.
+

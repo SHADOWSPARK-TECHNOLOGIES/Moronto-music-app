@@ -7,9 +7,11 @@ proof (branch, SHA, passing command output), mark it stale — a note is not evi
 Nigeria-first streaming/offline plan: 1 = access policy (done) · 2 = native Media3 online playback
 (done) · 3 = offline downloads (DONE, incl. offline-PLAYBACK device proof via FLAG_BLOCK_ON_CACHE,
 merged to main) · 4 = player + Downloads UI (RECOVERED & POLISHED: Mornica brand system, microcopy,
-compact header, persistent mini player) · 5 = airplane-mode & background testing (Unit/Robolectric verified;
-device offline proof via FLAG_BLOCK_ON_CACHE verified; physical hardware airplane radio / speaker audio UNVERIFIED) ·
-6 = independent QA + release candidate (no publish without owner approval).
+compact header, persistent mini player) · 5 = airplane-mode & background testing (DEVICE-VERIFIED 2026-11-08:
+ready-offline track plays 18.2s+ at PLAYING(3) with RF unreachable + survives force-stop/offline relaunch;
+physical hardware airplane radio / speaker audio UNVERIFIED) · 6 = independent QA DONE (PARTIAL: code PASS,
+signed release **BLOCKED on signing creds**) + release candidate (no publish without owner approval). ·
+N2 pending: `isLocalPlaying` direct-set hardening (pre-existing, owner decision).
 Authoritative spec: `docs/agent-loop/MORNICA_NIGERIA_FIRST_STREAMING_OFFLINE_SPEC.md`.
 
 ## Last verified state (2026-11-08)
