@@ -316,3 +316,29 @@ Finalized wrapper integrity (all verified, not invented):
    `gradlew`, `gradlew.bat`) are committed for review. No merge, publish, signing change, or Play Console
    action performed.
 
+## 2026-11-08 — INCIDENT: linked-worktree Git index corruption + recovery (no data loss)
+
+**Symptom:** `git status` in worktree `Mornica-loop4-20261107` failed with `fatal: unable to read 9917aef…`;
+`git fsck` reported 1300 missing blobs and an `invalid sha1 pointer in cache-tree`.
+
+**Root cause (diagnosed, not guessed):** the linked worktree's index file
+(`Moronto-music-app/.git/worktrees/Mornica-loop4-20261107/index`, 373,454 B, mtime 18:32:39) had been
+**overwritten with a foreign project's index** — 2,374 entries, almost all pointing to files that do not
+exist in this worktree (phantom `.claude-plugin/`, `.cursor-plugin/`, `assets/`, `skills/` ×970,
+`.github/` ×1349, `.mcp.json`, `apm.yml`, etc.). The on-disk Mornica source, the HEAD tree (108 correct
+entries), the object store, and all commits were **intact**; `GIT_INDEX_FILE` was unset; the parent
+repo's own index was clean (20 `app` entries). Cause is consistent with a foreign index file being copied
+over the worktree index concurrently (exact external writer not identified).
+
+**Recovery (non-destructive, per recovery contract — no `reset --hard`/`checkout`/`clean`):**
+1. Backed up the corrupt index to `/tmp/mornica_index_corrupt_backup_1794159766` (evidence retained,
+   outside the repo so it cannot be committed accidentally).
+2. `git read-tree HEAD` — rebuilt the index from the committed tree only; zero working-tree files or
+   commits modified.
+3. Post-repair `git fsck --connectivity-only` clean (single dangling tree from an earlier `--amend`,
+   harmless); `git status` correct (only the expected unrelated IDE changes remain uncommitted).
+
+**Verification of no data loss:** wrapper pin (`21bd5da2…`) and `gradle-wrapper.jar`
+(`3b8a2577…`) intact; Mornica `app/src` clean vs HEAD; commit `825d91c` contains only the 4 wrapper
+files + ledger doc. Toolchain freeze unchanged. No secrets/credentials were involved.
+
