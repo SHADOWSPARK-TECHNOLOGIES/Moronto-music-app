@@ -1,0 +1,8 @@
+{
+  "name": "Moronto Mornica",
+  "description": "Music for Real People · African Music at the Center",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
