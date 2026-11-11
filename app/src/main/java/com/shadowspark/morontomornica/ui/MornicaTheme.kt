@@ -11,24 +11,26 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// Original Moronto Music (com.aistudio.morontomusic.xkpqr) Midnight Slate & Emerald/Cyan/Amber Palette
-val MornicaMidnightBg = Color(0xFF0B101B)
-val MornicaSlateHeader = Color(0xFF0E1525)
-val MornicaSlateCard = Color(0xFF131D31)
-val MornicaSlateCardElevated = Color(0xFF19263E)
-val MornicaSlateBorder = Color(0xFF24344D)
+// Mornica brand system — original Nigeria-first palette (docs/brand/MORNICA_BRAND_SYSTEM.md)
+// Ink/Canvas/Surface for depth; Jade for affirmative/now-playing; Azure for links/secondary;
+// Amber for demo/rights notices; Coral for errors. NOT a copy of any competing music app.
+val MornicaMidnightBg = Color(0xFF071321)      // ink — deepest background
+val MornicaSlateHeader = Color(0xFF0B1727)      // canvas — app-level surface
+val MornicaSlateCard = Color(0xFF14243A)        // surface — elevated cards/sheets
+val MornicaSlateCardElevated = Color(0xFF1B2F4D) // surface+1 — hover / pressed cards
+val MornicaSlateBorder = Color(0xFF24344D)       // border — subtle separation
 
-val MornicaEmerald = Color(0xFF10B981)
-val MornicaEmeraldDark = Color(0xFF052E22)
-val MornicaCyan = Color(0xFF06B6D4)
-val MornicaInfoBlue = Color(0xFF0EA5E9)
-val MornicaAmberStart = Color(0xFFF59E0B)
-val MornicaAmberEnd = Color(0xFFEA580C)
-val MornicaGoldSparkle = Color(0xFFFBBF24)
-val MornicaDangerRed = Color(0xFFEF4444)
+val MornicaEmerald = Color(0xFF12D9A1)          // jade — now playing, affirmative
+val MornicaEmeraldDark = Color(0xFF062E22)       // jade container
+val MornicaCyan = Color(0xFF20B6EB)             // azure — links, secondary accent
+val MornicaInfoBlue = Color(0xFF20B6EB)          // azure alias
+val MornicaAmberStart = Color(0xFFFFBE55)        // amber — demo/rights/warning start
+val MornicaAmberEnd = Color(0xFFEA580C)          // amber gradient end
+val MornicaGoldSparkle = Color(0xFFFFBE55)       // amber alias for sparkle icon
+val MornicaDangerRed = Color(0xFFFF6479)         // coral — errors, caution
 
-val MornicaTextLight = Color(0xFFF8FAFC)
-val MornicaTextMuted = Color(0xFF94A3B8)
+val MornicaTextLight = Color(0xFFF4FAFE)         // foreground text
+val MornicaTextMuted = Color(0xFFA5B6CA)         // secondary/muted text
 
 val MornicaAmberGradient =
   Brush.horizontalGradient(
@@ -71,7 +73,7 @@ val MornicaTypography =
 private val MornicaDarkColorScheme =
   darkColorScheme(
     primary = MornicaEmerald,
-    onPrimary = Color(0xFF04130E),
+    onPrimary = Color(0xFF071321),
     secondary = MornicaCyan,
     onSecondary = MornicaMidnightBg,
     tertiary = MornicaAmberStart,

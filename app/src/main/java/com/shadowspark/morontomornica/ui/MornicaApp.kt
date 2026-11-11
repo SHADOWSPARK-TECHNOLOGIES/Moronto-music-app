@@ -2,6 +2,7 @@ package com.shadowspark.morontomornica.ui
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -105,6 +106,7 @@ import androidx.compose.ui.unit.dp
 import com.shadowspark.morontomornica.domain.LocalMediaRepository
 import com.shadowspark.morontomornica.domain.MornicaUiState
 import com.shadowspark.morontomornica.domain.PlaybackRouter
+import com.shadowspark.morontomornica.model.ActiveEngine
 import com.shadowspark.morontomornica.model.ArtistLaunchRequest
 import com.shadowspark.morontomornica.model.LibraryTab
 import com.shadowspark.morontomornica.model.LocalMediaTrack
@@ -122,6 +124,20 @@ fun MornicaApp(
 ) {
   val uiState by router.state.collectAsState()
   val context = LocalContext.current
+
+  // Back navigation: collapse an expanded Now Playing sheet first, then return to My Music
+  // from the other primary screens. On the My Music home screen (sheet collapsed) Back is
+  // left untouched so the system default (leave the app) still applies.
+  val backEnabled =
+    (uiState.isNowPlayingExpanded && uiState.activeLocalTrack != null) ||
+      uiState.currentScreen != PrimaryScreen.MY_MUSIC
+  BackHandler(enabled = backEnabled) {
+    if (uiState.isNowPlayingExpanded && uiState.activeLocalTrack != null) {
+      router.setNowPlayingExpanded(false)
+    } else {
+      router.selectScreen(PrimaryScreen.MY_MUSIC)
+    }
+  }
 
   MornicaTheme {
     Scaffold(
@@ -142,7 +158,10 @@ fun MornicaApp(
       },
       bottomBar = {
         Column(modifier = Modifier.navigationBarsPadding()) {
-          if (uiState.activeLocalTrack != null && !uiState.isNowPlayingExpanded) {
+          if (
+            (uiState.activeLocalTrack != null || uiState.activeCatalogTrack != null) &&
+              !uiState.isNowPlayingExpanded
+          ) {
             OfflineMiniPlayerBar(uiState = uiState, router = router)
           }
           HorizontalDivider(color = MornicaSlateBorder, thickness = 1.dp)
@@ -275,7 +294,7 @@ private fun MorontoTopHeader(
           }
           Column(modifier = Modifier.weight(1f)) {
             Text(
-              text = "Mornica Music",
+              text = "Mornica",
               style = MaterialTheme.typography.titleLarge,
               fontWeight = FontWeight.ExtraBold,
               color = MornicaTextLight,
@@ -284,10 +303,10 @@ private fun MorontoTopHeader(
               overflow = TextOverflow.Ellipsis,
             )
             Text(
-              text = "by ShadowSpark Technologies ⚡",
+              text = "Your music, your way",
               style = MaterialTheme.typography.labelMedium,
-              color = MornicaCyan,
-              fontWeight = FontWeight.SemiBold,
+              color = MornicaTextMuted,
+              fontWeight = FontWeight.Medium,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis,
@@ -384,6 +403,9 @@ private fun MyMusicOfflineScreen(
     }
 
   Column(modifier = Modifier.fillMaxSize()) {
+    // Loop 4: Licensed streaming + offline downloads surface (Nigerian-friendly).
+    LicensedCatalogSection(uiState = uiState, router = router)
+
     // 1. 5-Tab Musicolet-Style Icon + Label Top Bar (Tracks | Queues | Albums | Artists | Folders)
     Surface(
       color = MornicaSlateHeader,
@@ -847,7 +869,16 @@ private fun OfflineMiniPlayerBar(
   uiState: MornicaUiState,
   router: PlaybackRouter,
 ) {
-  val active = uiState.activeLocalTrack ?: return
+  val title =
+    when (uiState.activeEngine) {
+      ActiveEngine.LICENSED_CATALOG -> uiState.activeCatalogTrack?.title
+      else -> uiState.activeLocalTrack?.title
+    } ?: return
+  val artist =
+    when (uiState.activeEngine) {
+      ActiveEngine.LICENSED_CATALOG -> uiState.activeCatalogTrack?.artist.orEmpty()
+      else -> uiState.activeLocalTrack?.artist.orEmpty()
+    }
   val maxDuration = uiState.localDurationMs.coerceAtLeast(1_000L)
   val position = uiState.localPositionMs.coerceIn(0L, maxDuration)
   val progress = (position.toFloat() / maxDuration.toFloat()).coerceIn(0f, 1f)
@@ -895,7 +926,7 @@ private fun OfflineMiniPlayerBar(
           }
           Column(modifier = Modifier.weight(1f)) {
             Text(
-              text = active.title,
+              text = title,
               style = MaterialTheme.typography.bodyMedium,
               fontWeight = FontWeight.Bold,
               color = MornicaTextLight,
@@ -903,7 +934,7 @@ private fun OfflineMiniPlayerBar(
               overflow = TextOverflow.Ellipsis,
             )
             Text(
-              text = "${active.artist} • ${formatDurationMs(position)} / ${formatDurationMs(maxDuration)}",
+              text = "$artist • ${formatDurationMs(position)} / ${formatDurationMs(maxDuration)}",
               style = MaterialTheme.typography.labelSmall.withTabularNums(),
               color = MornicaCyan,
               maxLines = 1,
