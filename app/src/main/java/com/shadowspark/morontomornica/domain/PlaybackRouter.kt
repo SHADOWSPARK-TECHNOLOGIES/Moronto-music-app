@@ -290,6 +290,8 @@ class PlaybackRouter(
         statusBannerMessage = "Playing offline audio: ${track.title} (${track.provenance.label})",
       )
     }
+    // Phase A: feed on-device recommendation history (in-memory only; never leaves the device).
+    MornicaRuntime.onTrackPlayed?.invoke(track.id)
     return true
   }
 
@@ -1145,6 +1147,14 @@ object MornicaRuntime {
   @Volatile var serviceStarter: (() -> Unit)? = null
   @Volatile var downloadServiceStarter: ((DownloadRequest) -> Unit)? = null
   @Volatile private var catalogDownloadsWired = false
+  // Spotify-grade Phase A seams: playlist persistence (JSON now, Room-ready interface) and an
+  // on-device, zero-network recommender history. Idempotent defaults; MainActivity swaps the
+  // store for a SharedPreferences-backed instance (Phase B).
+  @Volatile var playlistStore: com.shadowspark.morontomornica.data.local.PlaylistStore =
+    com.shadowspark.morontomornica.data.local.InMemoryPlaylistStore()
+  val recommender: com.shadowspark.morontomornica.core.reco.OnDeviceRecommender =
+    com.shadowspark.morontomornica.core.reco.OnDeviceRecommender()
+  @Volatile var onTrackPlayed: ((String) -> Unit)? = null
   val localRepo: LocalMediaRepository = LocalMediaRepository()
   val youtubeRepo: YouTubeDiscoveryRepository = YouTubeDiscoveryRepository()
   val router: PlaybackRouter =
