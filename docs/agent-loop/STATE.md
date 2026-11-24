@@ -104,3 +104,11 @@ Device (API 36/37 x86_64 emulator, `Medium_Phone`, 1080x2400@420 = ~411dp, headl
   share the URI key for offline reads.
 - `DownloadStore` is a JSON store (no Room) — a deliberate, flagged deviation from the Loop-3 contract;
   switch to Room behind KSP only if a release candidate needs it.
+
+## Spotify-grade upgrade wave (2026-11-24, STATIC-VERIFIED; gates pending)
+- Branches `feat/mornica-spotify-phase-a-foundation` (`f5d6cac`), `feat/mornica-spotify-phase-b-shell`
+  (`27f3f57`, `a1caba9`), `feat/mornica-spotify-phase-c-player-depth` (`e59fe96`) prepared in a
+  no-SDK execution environment: additive Kotlin/Compose files + minimal router/Activity/App patches only.
+- Unit tests / lint / APK / instrumented playback: **UNVERIFIED here** — run `scripts/verify.sh` and the
+  connected test above on the owner machine before review. Enhanced now-playing sheet swap held for
+  device proof. Phase D items (Room/Coil/notification/R8/backend) remain approval-gated and untouched.
