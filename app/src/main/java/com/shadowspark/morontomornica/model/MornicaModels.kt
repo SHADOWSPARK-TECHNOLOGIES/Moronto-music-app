@@ -177,4 +177,4 @@ fun validateArtistLaunchRequest(request: ArtistLaunchRequest): ValidationResult 
 }
 
 const val PUBLIC_PRIVACY_POLICY_URL =
-  "https://github.com/SHADOWSPARK-TECHNOLOGIES/Moronto-music-app/blob/agent/antigravity-mornica-launch-contract-20261019/docs/PRIVACY_POLICY.md"
+  "https://github.com/SHADOWSPARK-TECHNOLOGIES/Moronto-music-app/blob/main/docs/PRIVACY_POLICY.md"

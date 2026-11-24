@@ -7,9 +7,9 @@ This packet contains the verified, copy-paste-ready declarations for **Google Pl
 ## 1. Public Privacy Policy URL (`VERIFIED`)
 
 - **Public GitHub Blob URL (HTML-rendered):**  
-  `https://github.com/SHADOWSPARK-TECHNOLOGIES/Moronto-music-app/blob/agent/antigravity-mornica-launch-contract-20261019/docs/PRIVACY_POLICY.md`
+  `https://github.com/SHADOWSPARK-TECHNOLOGIES/Moronto-music-app/blob/main/docs/PRIVACY_POLICY.md`
 - **Public Raw HTTPS URL:**  
-  `https://raw.githubusercontent.com/SHADOWSPARK-TECHNOLOGIES/Moronto-music-app/agent/antigravity-mornica-launch-contract-20261019/docs/PRIVACY_POLICY.md`
+  `https://raw.githubusercontent.com/SHADOWSPARK-TECHNOLOGIES/Moronto-music-app/main/docs/PRIVACY_POLICY.md`
 - **In-App Link:** Wired directly in `CreatorHubScreen` (`app/src/main/java/com/shadowspark/morontomornica/ui/MornicaApp.kt`) via the **"Open Public Privacy Policy"** button (`Intent.ACTION_VIEW`).
 
 ---
