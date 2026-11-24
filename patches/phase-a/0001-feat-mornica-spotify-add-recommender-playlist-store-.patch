@@ -1,0 +1,584 @@
+From f5d6cac84e26161a010d35a0cf90ae9152ebeb36 Mon Sep 17 00:00:00 2001
+From: mornica-spotify-bot <spotify-grade-bot@shadowspark.local>
+Date: Tue, 24 Nov 2026 03:40:38 +0100
+Subject: [PATCH] feat(mornica-spotify): add recommender, playlist store seam,
+ route holder
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Phase A foundation (additive, no new deps/permissions):
+- core/reco/OnDeviceRecommender.kt — pure-Kotlin on-device listening-history heuristics
+- data/local/PlaylistRepository.kt — PlaylistStore seam (InMemory + SharedPrefs JSON)
+- ui/nav/MornicaRoute.kt — overlay navigation holder (PrimaryScreen.entries untouched)
+- ui/home/HomeFeedModel.kt — pure feed builder; 3 new JUnit tests
+- PlaybackRouter: MornicaRuntime wires recommender + playlistStore; playLocalTrack records history
+
+Status: static-verified only (package/path/guardrail scan); testDebugUnitTest/lintDebug/assembleDebug
+UNVERIFIED in this environment — must run scripts/verify.sh on the owner machine before merge.
+---
+ .../core/reco/OnDeviceRecommender.kt          |  80 +++++++++++
+ .../data/local/PlaylistRepository.kt          | 131 ++++++++++++++++++
+ .../morontomornica/domain/PlaybackRouter.kt   |  10 ++
+ .../morontomornica/ui/home/HomeFeedModel.kt   |  38 +++++
+ .../morontomornica/ui/nav/MornicaRoute.kt     |  32 +++++
+ .../core/reco/OnDeviceRecommenderTest.kt      |  88 ++++++++++++
+ .../data/local/PlaylistRepositoryTest.kt      |  51 +++++++
+ .../ui/home/HomeFeedModelTest.kt              |  55 ++++++++
+ 8 files changed, 485 insertions(+)
+ create mode 100644 app/src/main/java/com/shadowspark/morontomornica/core/reco/OnDeviceRecommender.kt
+ create mode 100644 app/src/main/java/com/shadowspark/morontomornica/data/local/PlaylistRepository.kt
+ create mode 100644 app/src/main/java/com/shadowspark/morontomornica/ui/home/HomeFeedModel.kt
+ create mode 100644 app/src/main/java/com/shadowspark/morontomornica/ui/nav/MornicaRoute.kt
+ create mode 100644 app/src/test/java/com/shadowspark/morontomornica/core/reco/OnDeviceRecommenderTest.kt
+ create mode 100644 app/src/test/java/com/shadowspark/morontomornica/data/local/PlaylistRepositoryTest.kt
+ create mode 100644 app/src/test/java/com/shadowspark/morontomornica/ui/home/HomeFeedModelTest.kt
+
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/core/reco/OnDeviceRecommender.kt b/app/src/main/java/com/shadowspark/morontomornica/core/reco/OnDeviceRecommender.kt
+new file mode 100644
+index 0000000..78e0f49
+--- /dev/null
++++ b/app/src/main/java/com/shadowspark/morontomornica/core/reco/OnDeviceRecommender.kt
+@@ -0,0 +1,80 @@
++package com.shadowspark.morontomornica.core.reco
++
++import com.shadowspark.morontomornica.model.LocalMediaTrack
++
++data class ShelfModel(
++  val key: String,
++  val title: String,
++  val tracks: List<LocalMediaTrack>,
++)
++
++data class ArtistShelf(
++  val artist: String,
++  val tracks: List<LocalMediaTrack>,
++)
++
++/**
++ * On-device, zero-network recommendation heuristics. Pure Kotlin (no Android imports)
++ * so the rules run under plain JUnit. Listening history stays in memory on-device;
++ * nothing about the user's library leaves the device (privacy policy invariant).
++ */
++class OnDeviceRecommender(
++  private val clockMs: () -> Long = { System.currentTimeMillis() },
++) {
++  private data class PlayCount(
++    val trackId: String,
++    var plays: Int,
++    var lastPlayedAtMs: Long,
++  )
++
++  private val events = mutableMapOf<String, PlayCount>()
++
++  fun recordPlay(trackId: String, atMs: Long = clockMs()) {
++    val existing = events[trackId]
++    if (existing == null) {
++      events[trackId] = PlayCount(trackId, 1, atMs)
++    } else {
++      existing.plays += 1
++      existing.lastPlayedAtMs = atMs
++    }
++  }
++
++  fun recentTracks(tracks: List<LocalMediaTrack>, limit: Int = 10): List<LocalMediaTrack> {
++    val byId = tracks.filter { it.isPlayableOffline() }.associateBy { it.id }
++    return events.values
++      .sortedByDescending { it.lastPlayedAtMs }
++      .mapNotNull { byId[it.trackId] }
++      .distinct()
++      .take(limit)
++  }
++
++  fun favoriteTracks(tracks: List<LocalMediaTrack>, favorites: Set<String>): List<LocalMediaTrack> =
++    tracks.filter { it.isPlayableOffline() && it.id in favorites }
++
++  fun mostPlayed(tracks: List<LocalMediaTrack>, limit: Int = 10): List<LocalMediaTrack> {
++    val byId = tracks.filter { it.isPlayableOffline() }.associateBy { it.id }
++    return events.values
++      .sortedByDescending { it.plays }
++      .mapNotNull { byId[it.trackId] }
++      .distinct()
++      .take(limit)
++  }
++
++  fun topArtists(
++    tracks: List<LocalMediaTrack>,
++    maxArtists: Int = 6,
++    perArtist: Int = 4,
++  ): List<ArtistShelf> =
++    tracks
++      .filter { it.isPlayableOffline() }
++      .groupBy { it.artist }
++      .filter { it.value.size >= 2 }
++      .entries
++      .sortedByDescending { it.value.size }
++      .take(maxArtists)
++      .map { ArtistShelf(it.key, it.value.take(perArtist)) }
++
++  fun historySize(): Int = events.size
++
++  fun clear() = events.clear()
++}
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/data/local/PlaylistRepository.kt b/app/src/main/java/com/shadowspark/morontomornica/data/local/PlaylistRepository.kt
+new file mode 100644
+index 0000000..2d4791d
+--- /dev/null
++++ b/app/src/main/java/com/shadowspark/morontomornica/data/local/PlaylistRepository.kt
+@@ -0,0 +1,131 @@
++package com.shadowspark.morontomornica.data.local
++
++import android.content.Context
++import org.json.JSONArray
++import org.json.JSONObject
++
++/**
++ * Playlist persistence seam. The JSON SharedPreferences implementation mirrors the existing
++ * FileDownloadStore pattern; a Room implementation may later replace [SharedPrefsPlaylistStore]
++ * behind this same interface without touching UI code.
++ *
++ * Playlists track track IDs only; resolution to LocalMediaTrack stays in the UI/repository layer.
++ */
++interface PlaylistStore {
++  fun names(): List<String>
++  fun tracks(playlistName: String): List<String>
++  fun add(playlistName: String, trackId: String): Boolean
++  fun removeTrack(playlistName: String, trackId: String): Boolean
++  fun rename(oldName: String, newName: String): Boolean
++  fun delete(playlistName: String): Boolean
++  fun move(playlistName: String, fromIndex: Int, toIndex: Int): Boolean
++}
++
++class InMemoryPlaylistStore : PlaylistStore {
++  private val playlists = LinkedHashMap<String, MutableList<String>>()
++
++  override fun names(): List<String> = playlists.keys.toList()
++
++  override fun tracks(playlistName: String): List<String> =
++    playlists[playlistName].orEmpty().toList()
++
++  override fun add(playlistName: String, trackId: String): Boolean {
++    if (trackId.isBlank()) return false
++    val list = playlists.getOrPut(playlistName) { mutableListOf() }
++    if (list.contains(trackId)) return false
++    list.add(trackId)
++    return true
++  }
++
++  override fun removeTrack(playlistName: String, trackId: String): Boolean {
++    val list = playlists[playlistName] ?: return false
++    val removed = list.remove(trackId)
++    if (list.isEmpty()) playlists.remove(playlistName)
++    return removed
++  }
++
++  override fun rename(oldName: String, newName: String): Boolean {
++    if (oldName == newName || newName.isBlank()) return false
++    val list = playlists.remove(oldName) ?: return false
++    playlists[newName] = list
++    return true
++  }
++
++  override fun delete(playlistName: String): Boolean = playlists.remove(playlistName) != null
++
++  override fun move(playlistName: String, fromIndex: Int, toIndex: Int): Boolean {
++    val list = playlists[playlistName] ?: return false
++    if (fromIndex !in list.indices || toIndex !in list.indices) return false
++    if (fromIndex == toIndex) return false
++    val item = list.removeAt(fromIndex)
++    list.add(toIndex, item)
++    return true
++  }
++}
++
++class SharedPrefsPlaylistStore(context: Context) : PlaylistStore {
++  private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
++  private val memory = InMemoryPlaylistStore()
++
++  init {
++    load()
++  }
++
++  override fun names(): List<String> = memory.names()
++
++  override fun tracks(playlistName: String): List<String> = memory.tracks(playlistName)
++
++  override fun add(playlistName: String, trackId: String): Boolean =
++    memory.add(playlistName, trackId).also { if (it) persist() }
++
++  override fun removeTrack(playlistName: String, trackId: String): Boolean =
++    memory.removeTrack(playlistName, trackId).also { if (it) persist() }
++
++  override fun rename(oldName: String, newName: String): Boolean =
++    memory.rename(oldName, newName).also { if (it) persist() }
++
++  override fun delete(playlistName: String): Boolean =
++    memory.delete(playlistName).also { if (it) persist() }
++
++  override fun move(playlistName: String, fromIndex: Int, toIndex: Int): Boolean =
++    memory.move(playlistName, fromIndex, toIndex).also { if (it) persist() }
++
++  private fun load() {
++    val raw = prefs.getString(KEY_PLAYLISTS_JSON, null) ?: return
++    runCatching {
++      val root = JSONObject(raw)
++      val list = root.getJSONArray(KEY_PLAYLISTS)
++      for (i in 0 until list.length()) {
++        val entry = list.getJSONObject(i)
++        val name = entry.getString(KEY_NAME)
++        val ids = entry.getJSONArray(KEY_TRACK_IDS)
++        for (j in 0 until ids.length()) {
++          memory.add(name, ids.getString(j))
++        }
++      }
++    }
++  }
++
++  private fun persist() {
++    val root = JSONObject()
++    val arr = JSONArray()
++    memory.names().forEach { name ->
++      val entry = JSONObject()
++      entry.put(KEY_NAME, name)
++      val ids = JSONArray()
++      memory.tracks(name).forEach(ids::put)
++      entry.put(KEY_TRACK_IDS, ids)
++      arr.put(entry)
++    }
++    root.put(KEY_PLAYLISTS, arr)
++    prefs.edit().putString(KEY_PLAYLISTS_JSON, root.toString()).apply()
++  }
++
++  private companion object {
++    const val PREFS_NAME = "mornica_playlists"
++    const val KEY_PLAYLISTS_JSON = "playlists_json"
++    const val KEY_PLAYLISTS = "playlists"
++    const val KEY_NAME = "name"
++    const val KEY_TRACK_IDS = "trackIds"
++  }
++}
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/domain/PlaybackRouter.kt b/app/src/main/java/com/shadowspark/morontomornica/domain/PlaybackRouter.kt
+index 2c2cc1b..8dfb977 100644
+--- a/app/src/main/java/com/shadowspark/morontomornica/domain/PlaybackRouter.kt
++++ b/app/src/main/java/com/shadowspark/morontomornica/domain/PlaybackRouter.kt
+@@ -290,6 +290,8 @@ class PlaybackRouter(
+         statusBannerMessage = "Playing offline audio: ${track.title} (${track.provenance.label})",
+       )
+     }
++    // Phase A: feed on-device recommendation history (in-memory only; never leaves the device).
++    MornicaRuntime.onTrackPlayed?.invoke(track.id)
+     return true
+   }
+ 
+@@ -1145,6 +1147,14 @@ object MornicaRuntime {
+   @Volatile var serviceStarter: (() -> Unit)? = null
+   @Volatile var downloadServiceStarter: ((DownloadRequest) -> Unit)? = null
+   @Volatile private var catalogDownloadsWired = false
++  // Spotify-grade Phase A seams: playlist persistence (JSON now, Room-ready interface) and an
++  // on-device, zero-network recommender history. Idempotent defaults; MainActivity swaps the
++  // store for a SharedPreferences-backed instance (Phase B).
++  @Volatile var playlistStore: com.shadowspark.morontomornica.data.local.PlaylistStore =
++    com.shadowspark.morontomornica.data.local.InMemoryPlaylistStore()
++  val recommender: com.shadowspark.morontomornica.core.reco.OnDeviceRecommender =
++    com.shadowspark.morontomornica.core.reco.OnDeviceRecommender()
++  @Volatile var onTrackPlayed: ((String) -> Unit)? = null
+   val localRepo: LocalMediaRepository = LocalMediaRepository()
+   val youtubeRepo: YouTubeDiscoveryRepository = YouTubeDiscoveryRepository()
+   val router: PlaybackRouter =
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/ui/home/HomeFeedModel.kt b/app/src/main/java/com/shadowspark/morontomornica/ui/home/HomeFeedModel.kt
+new file mode 100644
+index 0000000..ad9b1ee
+--- /dev/null
++++ b/app/src/main/java/com/shadowspark/morontomornica/ui/home/HomeFeedModel.kt
+@@ -0,0 +1,38 @@
++package com.shadowspark.morontomornica.ui.home
++
++import com.shadowspark.morontomornica.core.reco.ArtistShelf
++import com.shadowspark.morontomornica.core.reco.OnDeviceRecommender
++import com.shadowspark.morontomornica.core.reco.ShelfModel
++import com.shadowspark.morontomornica.model.LocalMediaTrack
++
++/**
++ * Pure feed builder for the Home shelf screen. Framework-free so it can be unit-tested
++ * without Robolectric; the Compose screen only renders [Feed].
++ */
++object HomeFeedModel {
++  data class Feed(
++    val shelves: List<ShelfModel>,
++    val artistShelves: List<ArtistShelf>,
++    val totalTracks: Int,
++  )
++
++  fun build(
++    tracks: List<LocalMediaTrack>,
++    favorites: Set<String>,
++    recommender: OnDeviceRecommender,
++  ): Feed {
++    val playable = tracks.filter { it.isPlayableOffline() }
++    val shelves = buildList {
++      val recent = recommender.recentTracks(playable, limit = 10)
++      if (recent.isNotEmpty()) add(ShelfModel("recent", "Recent", recent))
++
++      val liked = recommender.favoriteTracks(playable, favorites)
++      if (liked.isNotEmpty()) add(ShelfModel("liked", "Liked songs", liked))
++
++      val top = recommender.mostPlayed(playable, limit = 10)
++      if (top.isNotEmpty()) add(ShelfModel("top", "Most played", top))
++    }
++    val artistShelves = recommender.topArtists(playable)
++    return Feed(shelves, artistShelves, playable.size)
++  }
++}
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/ui/nav/MornicaRoute.kt b/app/src/main/java/com/shadowspark/morontomornica/ui/nav/MornicaRoute.kt
+new file mode 100644
+index 0000000..cc5fd2a
+--- /dev/null
++++ b/app/src/main/java/com/shadowspark/morontomornica/ui/nav/MornicaRoute.kt
+@@ -0,0 +1,32 @@
++package com.shadowspark.morontomornica.ui.nav
++
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.asStateFlow
++
++/**
++ * Lightweight overlay navigation for secondary screens (search, downloads, settings,
++ * playlist detail). The three bottom-tab PrimaryScreens are unchanged; these routes
++ * render as full-screen overlays on top of the active tab so existing navigation and
++ * accessibility tests keep their assumptions.
++ */
++sealed interface MornicaRoute {
++  data object HomeFeed : MornicaRoute
++  data object Search : MornicaRoute
++  data object Downloads : MornicaRoute
++  data object Settings : MornicaRoute
++  data class PlaylistDetail(val name: String) : MornicaRoute
++}
++
++object MornicaNav {
++  private val _route = MutableStateFlow<MornicaRoute?>(null)
++  val route: StateFlow<MornicaRoute?> = _route.asStateFlow()
++
++  fun open(route: MornicaRoute) {
++    _route.value = route
++  }
++
++  fun close() {
++    _route.value = null
++  }
++}
+diff --git a/app/src/test/java/com/shadowspark/morontomornica/core/reco/OnDeviceRecommenderTest.kt b/app/src/test/java/com/shadowspark/morontomornica/core/reco/OnDeviceRecommenderTest.kt
+new file mode 100644
+index 0000000..5d9d416
+--- /dev/null
++++ b/app/src/test/java/com/shadowspark/morontomornica/core/reco/OnDeviceRecommenderTest.kt
+@@ -0,0 +1,88 @@
++package com.shadowspark.morontomornica.core.reco
++
++import com.shadowspark.morontomornica.model.LocalMediaTrack
++import com.shadowspark.morontomornica.model.ProvenanceStatus
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class OnDeviceRecommenderTest {
++
++  private fun track(
++    id: String,
++    title: String,
++    artist: String,
++    releaseYear: Int = 2026,
++  ) =
++    LocalMediaTrack(
++      id = id,
++      title = title,
++      artist = artist,
++      album = "Album",
++      folderName = "Folder",
++      durationMs = 200_000L,
++      uri = "content://media/external/audio/media/$id",
++      provenance = ProvenanceStatus.LOCAL_DEVICE,
++      rightsConfirmed = true,
++      releaseYear = releaseYear,
++    )
++
++  @Test
++  fun recentTracks_ordersByLatestPlayFirst() {
++    val reco = OnDeviceRecommender(clockMs = { 0L })
++    val a = track("a", "A", "Artist One")
++    val b = track("b", "B", "Artist One")
++    reco.recordPlay("a", atMs = 1_000L)
++    reco.recordPlay("b", atMs = 2_000L)
++
++    val recent = reco.recentTracks(listOf(a, b))
++    assertEquals("b", recent.first().id)
++  }
++
++  @Test
++  fun favoriteTracks_filtersByFavoriteIdsAndPlayable() {
++    val reco = OnDeviceRecommender()
++    val liked = track("liked", "Liked", "Artist Two")
++    val other = track("other", "Other", "Artist Two")
++
++    val result = reco.favoriteTracks(listOf(liked, other), favorites = setOf("liked"))
++    assertEquals(1, result.size)
++    assertEquals("liked", result.first().id)
++  }
++
++  @Test
++  fun mostPlayed_ordersByPlayCountDescending() {
++    val reco = OnDeviceRecommender()
++    val a = track("a", "A", "Artist One")
++    val b = track("b", "B", "Artist One")
++    repeat(3) { reco.recordPlay("a") }
++    repeat(1) { reco.recordPlay("b") }
++
++    val top = reco.mostPlayed(listOf(a, b))
++    assertEquals("a", top.first().id)
++  }
++
++  @Test
++  fun topArtists_groupsArtistsWithAtLeastTwoTracks() {
++    val reco = OnDeviceRecommender()
++    val tracks =
++      listOf(
++        track("a1", "A1", "Asake"),
++        track("a2", "A2", "Asake"),
++        track("b1", "B1", "Solo Artist"),
++      )
++
++    val shelves = reco.topArtists(tracks)
++    assertEquals(1, shelves.size)
++    assertEquals("Asake", shelves.first().artist)
++    assertEquals(2, shelves.first().tracks.size)
++  }
++
++  @Test
++  fun clear_resetsHistory() {
++    val reco = OnDeviceRecommender()
++    reco.recordPlay("a")
++    reco.clear()
++    assertTrue(reco.historySize() == 0)
++  }
++}
+diff --git a/app/src/test/java/com/shadowspark/morontomornica/data/local/PlaylistRepositoryTest.kt b/app/src/test/java/com/shadowspark/morontomornica/data/local/PlaylistRepositoryTest.kt
+new file mode 100644
+index 0000000..f9c7b64
+--- /dev/null
++++ b/app/src/test/java/com/shadowspark/morontomornica/data/local/PlaylistRepositoryTest.kt
+@@ -0,0 +1,51 @@
++package com.shadowspark.morontomornica.data.local
++
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class PlaylistRepositoryTest {
++
++  private val store = InMemoryPlaylistStore()
++
++  @Test
++  fun add_storesTrackIdsWithoutDuplicates() {
++    assertTrue(store.add("Lagos Commute", "t1"))
++    assertFalse(store.add("Lagos Commute", "t1"))
++    assertEquals(listOf("t1"), store.tracks("Lagos Commute"))
++  }
++
++  @Test
++  fun removeTrack_deletesEmptyPlaylist() {
++    store.add("Mix", "t1")
++    assertTrue(store.removeTrack("Mix", "t1"))
++    assertTrue(store.names().none { it == "Mix" })
++  }
++
++  @Test
++  fun rename_updatesName() {
++    store.add("Old", "t1")
++    assertTrue(store.rename("Old", "New"))
++    assertTrue(store.names().contains("New"))
++    assertFalse(store.names().contains("Old"))
++  }
++
++  @Test
++  fun delete_removesPlaylist() {
++    store.add("Temp", "t1")
++    assertTrue(store.delete("Temp"))
++    assertFalse(store.names().contains("Temp"))
++  }
++
++  @Test
++  fun move_reordersWithinBounds() {
++    val name = "Queue"
++    listOf("t1", "t2", "t3").forEach { store.add(name, it) }
++
++    assertTrue(store.move(name, 0, 2))
++    assertEquals(listOf("t2", "t3", "t1"), store.tracks(name))
++
++    assertFalse(store.move(name, 0, 99))
++  }
++}
+diff --git a/app/src/test/java/com/shadowspark/morontomornica/ui/home/HomeFeedModelTest.kt b/app/src/test/java/com/shadowspark/morontomornica/ui/home/HomeFeedModelTest.kt
+new file mode 100644
+index 0000000..e8024b6
+--- /dev/null
++++ b/app/src/test/java/com/shadowspark/morontomornica/ui/home/HomeFeedModelTest.kt
+@@ -0,0 +1,55 @@
++package com.shadowspark.morontomornica.ui.home
++
++import com.shadowspark.morontomornica.core.reco.OnDeviceRecommender
++import com.shadowspark.morontomornica.model.LocalMediaTrack
++import com.shadowspark.morontomornica.model.ProvenanceStatus
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class HomeFeedModelTest {
++
++  private fun track(id: String, artist: String = "Artist") =
++    LocalMediaTrack(
++      id = id,
++      title = "Title $id",
++      artist = artist,
++      album = "Album",
++      folderName = "Folder",
++      durationMs = 200_000L,
++      uri = "content://media/external/audio/media/$id",
++      provenance = ProvenanceStatus.LOCAL_DEVICE,
++      rightsConfirmed = true,
++    )
++
++  @Test
++  fun build_emptyLibrary_yieldsEmptyShelves() {
++    val feed = HomeFeedModel.build(emptyList(), favorites = emptySet(), recommender = OnDeviceRecommender())
++    assertTrue(feed.shelves.isEmpty())
++    assertTrue(feed.artistShelves.isEmpty())
++    assertEquals(0, feed.totalTracks)
++  }
++
++  @Test
++  fun build_favoritesYieldLikedShelf() {
++    val tracks = listOf(track("1"), track("2"))
++    val feed = HomeFeedModel.build(tracks, favorites = setOf("1"), recommender = OnDeviceRecommender())
++
++    val liked = feed.shelves.firstOrNull { it.key == "liked" }
++    assertTrue(liked != null)
++    assertEquals(1, liked!!.tracks.size)
++    assertEquals("1", liked.tracks.first().id)
++  }
++
++  @Test
++  fun build_recentHistoryYieldsRecentShelf() {
++    val reco = OnDeviceRecommender()
++    reco.recordPlay("1")
++    val tracks = listOf(track("1"), track("2"))
++
++    val feed = HomeFeedModel.build(tracks, favorites = emptySet(), recommender = reco)
++    val recent = feed.shelves.firstOrNull { it.key == "recent" }
++    assertTrue(recent != null)
++    assertEquals("1", recent!!.tracks.first().id)
++  }
++}
+-- 
+2.34.1
+

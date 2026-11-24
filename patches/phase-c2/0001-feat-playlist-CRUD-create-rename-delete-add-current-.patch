@@ -1,0 +1,411 @@
+From 962c24663234da9fb79a24a0c84b2bc09b2cc654 Mon Sep 17 00:00:00 2001
+From: mornica-spotify-bot <spotify-grade-bot@shadowspark.local>
+Date: Tue, 24 Nov 2026 04:18:49 +0100
+Subject: [PATCH 1/2] feat: playlist CRUD (create, rename, delete, add current
+ track) with list screen
+
+---
+ .../data/local/PlaylistRepository.kt          |  10 ++
+ .../morontomornica/ui/MornicaApp.kt           |  17 +++
+ .../morontomornica/ui/nav/MornicaRoute.kt     |   1 +
+ .../ui/playlist/PlaylistDetailScreen.kt       |  78 +++++++++-
+ .../ui/playlist/PlaylistListScreen.kt         | 139 ++++++++++++++++++
+ .../data/local/PlaylistRepositoryTest.kt      |  18 +++
+ 6 files changed, 261 insertions(+), 2 deletions(-)
+ create mode 100644 app/src/main/java/com/shadowspark/morontomornica/ui/playlist/PlaylistListScreen.kt
+
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/data/local/PlaylistRepository.kt b/app/src/main/java/com/shadowspark/morontomornica/data/local/PlaylistRepository.kt
+index 2d4791d..65c0eec 100644
+--- a/app/src/main/java/com/shadowspark/morontomornica/data/local/PlaylistRepository.kt
++++ b/app/src/main/java/com/shadowspark/morontomornica/data/local/PlaylistRepository.kt
+@@ -13,6 +13,7 @@ import org.json.JSONObject
+  */
+ interface PlaylistStore {
+   fun names(): List<String>
++  fun create(name: String): Boolean
+   fun tracks(playlistName: String): List<String>
+   fun add(playlistName: String, trackId: String): Boolean
+   fun removeTrack(playlistName: String, trackId: String): Boolean
+@@ -26,6 +27,13 @@ class InMemoryPlaylistStore : PlaylistStore {
+ 
+   override fun names(): List<String> = playlists.keys.toList()
+ 
++  override fun create(name: String): Boolean {
++    val trimmed = name.trim()
++    if (trimmed.isBlank() || playlists.containsKey(trimmed)) return false
++    playlists[trimmed] = mutableListOf()
++    return true
++  }
++
+   override fun tracks(playlistName: String): List<String> =
+     playlists[playlistName].orEmpty().toList()
+ 
+@@ -73,6 +81,8 @@ class SharedPrefsPlaylistStore(context: Context) : PlaylistStore {
+ 
+   override fun names(): List<String> = memory.names()
+ 
++  override fun create(name: String): Boolean = memory.create(name).also { if (it) persist() }
++
+   override fun tracks(playlistName: String): List<String> = memory.tracks(playlistName)
+ 
+   override fun add(playlistName: String, trackId: String): Boolean =
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/ui/MornicaApp.kt b/app/src/main/java/com/shadowspark/morontomornica/ui/MornicaApp.kt
+index 473e872..c8e6dfb 100644
+--- a/app/src/main/java/com/shadowspark/morontomornica/ui/MornicaApp.kt
++++ b/app/src/main/java/com/shadowspark/morontomornica/ui/MornicaApp.kt
+@@ -122,6 +122,7 @@ import com.shadowspark.morontomornica.ui.library.DownloadsScreen
+ import com.shadowspark.morontomornica.ui.nav.MornicaNav
+ import com.shadowspark.morontomornica.ui.nav.MornicaRoute
+ import com.shadowspark.morontomornica.ui.playlist.PlaylistDetailScreen
++import com.shadowspark.morontomornica.ui.playlist.PlaylistListScreen
+ import com.shadowspark.morontomornica.ui.search.SearchScreen
+ import com.shadowspark.morontomornica.ui.settings.SettingsScreen
+ 
+@@ -278,6 +279,12 @@ fun MornicaApp(
+                 onOpenSearch = { MornicaNav.open(MornicaRoute.Search) },
+                 onOpenDownloads = { MornicaNav.open(MornicaRoute.Downloads) },
+               )
++            MornicaRoute.Playlists ->
++              PlaylistListScreen(
++                store = MornicaRuntime.playlistStore,
++                onOpenPlaylist = { MornicaNav.open(MornicaRoute.PlaylistDetail(it)) },
++                onBack = { MornicaNav.close() },
++              )
+             is MornicaRoute.PlaylistDetail ->
+               PlaylistDetailScreen(
+                 name = activeRoute.name,
+@@ -447,6 +454,16 @@ private fun MorontoTopHeader(
+                 Icon(Icons.Default.Info, contentDescription = null)
+               },
+             )
++            DropdownMenuItem(
++              text = { Text("Playlists") },
++              onClick = {
++                overflowExpanded = false
++                MornicaNav.open(MornicaRoute.Playlists)
++              },
++              leadingIcon = {
++                Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null)
++              },
++            )
+           }
+         }
+       }
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/ui/nav/MornicaRoute.kt b/app/src/main/java/com/shadowspark/morontomornica/ui/nav/MornicaRoute.kt
+index cc5fd2a..f7383e4 100644
+--- a/app/src/main/java/com/shadowspark/morontomornica/ui/nav/MornicaRoute.kt
++++ b/app/src/main/java/com/shadowspark/morontomornica/ui/nav/MornicaRoute.kt
+@@ -15,6 +15,7 @@ sealed interface MornicaRoute {
+   data object Search : MornicaRoute
+   data object Downloads : MornicaRoute
+   data object Settings : MornicaRoute
++  data object Playlists : MornicaRoute
+   data class PlaylistDetail(val name: String) : MornicaRoute
+ }
+ 
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/ui/playlist/PlaylistDetailScreen.kt b/app/src/main/java/com/shadowspark/morontomornica/ui/playlist/PlaylistDetailScreen.kt
+index 33cce40..79c6775 100644
+--- a/app/src/main/java/com/shadowspark/morontomornica/ui/playlist/PlaylistDetailScreen.kt
++++ b/app/src/main/java/com/shadowspark/morontomornica/ui/playlist/PlaylistDetailScreen.kt
+@@ -10,17 +10,25 @@ import androidx.compose.foundation.lazy.LazyColumn
+ import androidx.compose.foundation.lazy.itemsIndexed
+ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.automirrored.filled.ArrowBack
++import androidx.compose.material.icons.filled.Add
+ import androidx.compose.material.icons.filled.ArrowDownward
+ import androidx.compose.material.icons.filled.ArrowUpward
+ import androidx.compose.material.icons.filled.Close
++import androidx.compose.material.icons.filled.Delete
++import androidx.compose.material.icons.filled.Edit
+ import androidx.compose.material.icons.filled.PlayArrow
++import androidx.compose.material3.AlertDialog
+ import androidx.compose.material3.Icon
+ import androidx.compose.material3.IconButton
+ import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.OutlinedButton
++import androidx.compose.material3.OutlinedTextField
+ import androidx.compose.material3.Text
++import androidx.compose.material3.TextButton
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.getValue
+ import androidx.compose.runtime.mutableIntStateOf
++import androidx.compose.runtime.mutableStateOf
+ import androidx.compose.runtime.remember
+ import androidx.compose.runtime.setValue
+ import androidx.compose.ui.Alignment
+@@ -36,8 +44,9 @@ import com.shadowspark.morontomornica.ui.MornicaTextMuted
+ import com.shadowspark.morontomornica.ui.components.TrackRowCompact
+ 
+ /**
+- * Playlist detail backed by [PlaylistStore]. Reorder/remove actions bump [version] so the
+- * snapshot recomposes; when Room replaces the store, observe its Flow instead of this counter.
++ * Playlist detail backed by [PlaylistStore]: play, add the current track, rename, delete,
++ * remove tracks, and reorder up/down. Mutations bump [version] so the snapshot recomposes;
++ * when Room replaces the store, observe its Flow instead of this counter.
+  */
+ @Composable
+ fun PlaylistDetailScreen(
+@@ -52,6 +61,9 @@ fun PlaylistDetailScreen(
+   val tracks = remember(version, ids, uiState.localTracks) {
+     uiState.localTracks.filter { it.id in ids }
+   }
++  var showRename by remember { mutableStateOf(false) }
++  var confirmDelete by remember { mutableStateOf(false) }
++  var renameValue by remember(name) { mutableStateOf(name) }
+ 
+   Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+     Row(verticalAlignment = Alignment.CenterVertically) {
+@@ -62,11 +74,28 @@ fun PlaylistDetailScreen(
+         Text(name, style = MaterialTheme.typography.titleLarge, color = MornicaTextLight, fontWeight = FontWeight.Bold)
+         Text("${tracks.size} tracks", style = MaterialTheme.typography.labelMedium, color = MornicaTextMuted)
+       }
++      IconButton(onClick = { showRename = true }) {
++        Icon(Icons.Default.Edit, contentDescription = "Rename playlist", tint = MornicaTextMuted)
++      }
++      IconButton(onClick = { confirmDelete = true }) {
++        Icon(Icons.Default.Delete, contentDescription = "Delete playlist", tint = MornicaTextMuted)
++      }
+       IconButton(onClick = { tracks.firstOrNull()?.let { router.playLocalTrack(it) } }) {
+         Icon(Icons.Default.PlayArrow, contentDescription = "Play playlist", tint = MornicaEmerald)
+       }
+     }
+ 
++    val active = uiState.activeLocalTrack
++    if (active != null && active.id !in ids) {
++      OutlinedButton(onClick = {
++        store.add(name, active.id)
++        version++
++      }) {
++        Icon(Icons.Default.Add, contentDescription = null, tint = MornicaEmerald)
++        Text("Add current track", color = MornicaEmerald, modifier = Modifier.padding(start = 6.dp))
++      }
++    }
++
+     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+       itemsIndexed(tracks, key = { _, track -> track.id }) { index, track ->
+         TrackRowCompact(
+@@ -101,4 +130,49 @@ fun PlaylistDetailScreen(
+       }
+     }
+   }
++
++  if (showRename) {
++    AlertDialog(
++      onDismissRequest = { showRename = false },
++      title = { Text("Rename playlist") },
++      text = {
++        OutlinedTextField(
++          value = renameValue,
++          onValueChange = { renameValue = it },
++          singleLine = true,
++          placeholder = { Text("Playlist name") },
++        )
++      },
++      confirmButton = {
++        TextButton(onClick = {
++          val newName = renameValue.trim()
++          if (newName.isNotBlank() && store.rename(name, newName)) {
++            showRename = false
++            onBack()
++          }
++        }) { Text("Rename") }
++      },
++      dismissButton = {
++        TextButton(onClick = { showRename = false }) { Text("Cancel") }
++      },
++    )
++  }
++
++  if (confirmDelete) {
++    AlertDialog(
++      onDismissRequest = { confirmDelete = false },
++      title = { Text("Delete playlist?") },
++      text = { Text("\"$name\" and its track order are removed from this device. Tracks in your library are not deleted.") },
++      confirmButton = {
++        TextButton(onClick = {
++          store.delete(name)
++          confirmDelete = false
++          onBack()
++        }) { Text("Delete") }
++      },
++      dismissButton = {
++        TextButton(onClick = { confirmDelete = false }) { Text("Cancel") }
++      },
++    )
++  }
+ }
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/ui/playlist/PlaylistListScreen.kt b/app/src/main/java/com/shadowspark/morontomornica/ui/playlist/PlaylistListScreen.kt
+new file mode 100644
+index 0000000..c115ce1
+--- /dev/null
++++ b/app/src/main/java/com/shadowspark/morontomornica/ui/playlist/PlaylistListScreen.kt
+@@ -0,0 +1,139 @@
++package com.shadowspark.morontomornica.ui.playlist
++
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.PaddingValues
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.Spacer
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.lazy.items
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.automirrored.filled.ArrowBack
++import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
++import androidx.compose.material.icons.filled.Add
++import androidx.compose.material3.AlertDialog
++import androidx.compose.material3.Icon
++import androidx.compose.material3.IconButton
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.OutlinedButton
++import androidx.compose.material3.OutlinedTextField
++import androidx.compose.material3.Text
++import androidx.compose.material3.TextButton
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableIntStateOf
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.setValue
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.dp
++import com.shadowspark.morontomornica.data.local.PlaylistStore
++import com.shadowspark.morontomornica.ui.MornicaCyan
++import com.shadowspark.morontomornica.ui.MornicaEmerald
++import com.shadowspark.morontomornica.ui.MornicaTextLight
++import com.shadowspark.morontomornica.ui.MornicaTextMuted
++import com.shadowspark.morontomornica.ui.components.EmptyStateCard
++
++/**
++ * Playlist index over [PlaylistStore]. Create here, open a playlist for reorder/remove.
++ * No network; names and track IDs persist through the store's JSON implementation.
++ */
++@Composable
++fun PlaylistListScreen(
++  store: PlaylistStore,
++  onOpenPlaylist: (String) -> Unit,
++  onBack: () -> Unit,
++) {
++  var version by remember { mutableIntStateOf(0) }
++  val names = remember(version) { store.names() }
++  var showCreate by remember { mutableStateOf(false) }
++  var newName by remember { mutableStateOf("") }
++
++  LazyColumn(
++    modifier = Modifier.fillMaxSize().padding(16.dp),
++    contentPadding = PaddingValues(vertical = 8.dp),
++    verticalArrangement = Arrangement.spacedBy(8.dp),
++  ) {
++    item {
++      Row(verticalAlignment = Alignment.CenterVertically) {
++        IconButton(onClick = onBack) {
++          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MornicaEmerald)
++        }
++        Column(modifier = Modifier.weight(1f)) {
++          Text("Playlists", style = MaterialTheme.typography.titleLarge, color = MornicaTextLight, fontWeight = FontWeight.Bold)
++          Text("Created and kept on this device", style = MaterialTheme.typography.labelMedium, color = MornicaTextMuted)
++        }
++        OutlinedButton(onClick = { showCreate = true }) {
++          Icon(Icons.Default.Add, contentDescription = null, tint = MornicaEmerald)
++          Text("New", color = MornicaEmerald, modifier = Modifier.padding(start = 6.dp))
++        }
++      }
++    }
++
++    if (names.isEmpty()) {
++      item {
++        EmptyStateCard(
++          title = "No playlists yet",
++          body = "Create a playlist, then add tracks from the Now Playing screen. Playlists stay on this device.",
++          actionLabel = "New playlist",
++          onAction = { showCreate = true },
++        )
++      }
++    }
++
++    items(names, key = { it }) { name ->
++      val count = store.tracks(name).size
++      Row(
++        modifier =
++          Modifier
++            .fillMaxWidth()
++            .padding(vertical = 4.dp),
++        verticalAlignment = Alignment.CenterVertically,
++      ) {
++        Column(modifier = Modifier.weight(1f)) {
++          Text(name, style = MaterialTheme.typography.titleSmall, color = MornicaTextLight, fontWeight = FontWeight.Bold)
++          Text("$count tracks", style = MaterialTheme.typography.bodySmall, color = MornicaTextMuted)
++        }
++        IconButton(onClick = { onOpenPlaylist(name) }) {
++          Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Open playlist", tint = MornicaCyan)
++        }
++      }
++    }
++
++    item { Spacer(Modifier.height(72.dp)) }
++  }
++
++  if (showCreate) {
++    AlertDialog(
++      onDismissRequest = { showCreate = false },
++      title = { Text("New playlist") },
++      text = {
++        OutlinedTextField(
++          value = newName,
++          onValueChange = { newName = it },
++          singleLine = true,
++          placeholder = { Text("Playlist name") },
++        )
++      },
++      confirmButton = {
++        TextButton(onClick = {
++          if (store.create(newName.trim())) {
++            val created = newName.trim()
++            newName = ""
++            showCreate = false
++            onOpenPlaylist(created)
++          }
++        }) { Text("Create") }
++      },
++      dismissButton = {
++        TextButton(onClick = { showCreate = false }) { Text("Cancel") }
++      },
++    )
++  }
++}
+diff --git a/app/src/test/java/com/shadowspark/morontomornica/data/local/PlaylistRepositoryTest.kt b/app/src/test/java/com/shadowspark/morontomornica/data/local/PlaylistRepositoryTest.kt
+index f9c7b64..dc94d85 100644
+--- a/app/src/test/java/com/shadowspark/morontomornica/data/local/PlaylistRepositoryTest.kt
++++ b/app/src/test/java/com/shadowspark/morontomornica/data/local/PlaylistRepositoryTest.kt
+@@ -48,4 +48,22 @@ class PlaylistRepositoryTest {
+ 
+     assertFalse(store.move(name, 0, 99))
+   }
++
++  @Test
++  fun create_rejectsBlankAndDuplicateNames() {
++    assertFalse(store.create("   "))
++    assertTrue(store.create("Morning Drive"))
++    assertFalse(store.create("Morning Drive"))
++    assertTrue(store.names().contains("Morning Drive"))
++    assertTrue(store.tracks("Morning Drive").isEmpty())
++  }
++
++  @Test
++  fun rename_preservesTrackIds() {
++    assertTrue(store.create("Working Title"))
++    assertTrue(store.add("Working Title", "t1"))
++    assertTrue(store.rename("Working Title", "Lagos Drive"))
++    assertEquals(listOf("t1"), store.tracks("Lagos Drive"))
++    assertFalse(store.names().contains("Working Title"))
++  }
+ }
+-- 
+2.34.1
+

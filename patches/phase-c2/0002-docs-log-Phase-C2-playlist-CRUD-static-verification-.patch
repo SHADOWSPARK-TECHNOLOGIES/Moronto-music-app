@@ -1,0 +1,57 @@
+From f1afaf42708373ab7746ec696f438e2bbc4d1d16 Mon Sep 17 00:00:00 2001
+From: mornica-spotify-bot <spotify-grade-bot@shadowspark.local>
+Date: Tue, 24 Nov 2026 04:18:49 +0100
+Subject: [PATCH 2/2] docs: log Phase C2 playlist CRUD static verification and
+ Phase D gate proposal
+
+---
+ docs/EXECUTION_LOG.md    | 19 +++++++++++++++++++
+ docs/agent-loop/STATE.md |  5 +++++
+ 2 files changed, 24 insertions(+)
+
+diff --git a/docs/EXECUTION_LOG.md b/docs/EXECUTION_LOG.md
+index 20e5aa8..54136d0 100644
+--- a/docs/EXECUTION_LOG.md
++++ b/docs/EXECUTION_LOG.md
+@@ -385,6 +385,25 @@ mandatory gates before any of these branches is merge-ready.
+   emulator/device proof records queue removal, jump, and 1-minute timer pause through
+   `toggleLocalPlayPause()`.
+ 
++### Phase C2 — playlist CRUD (branch `feat/mornica-spotify-phase-c-playlist-crud`, static-verified)
++- `PlaylistStore.create(name: String): Boolean` on both implementations; blanks and duplicates
++  rejected; empty lists persist through `SharedPrefsPlaylistStore.persist()`.
++- Added `ui/playlist/PlaylistListScreen.kt`: create dialog, per-playlist track counts, open-detail.
++- `ui/playlist/PlaylistDetailScreen.kt`: rename dialog, delete confirmation, add-current-track
++  button (uses `store.add`; playable-offline records only), existing reorder/remove-track retained.
++- `ui/nav/MornicaRoute.kt`: `data object Playlists`; `ui/MornicaApp.kt`: list overlay branch +
++  overflow-menu entry (`Icons.AutoMirrored.Filled.QueueMusic`).
++- `PlaylistRepositoryTest` gains create/rename-preserve-track cases (pure JUnit, no Android deps).
++- Static checks: package/path OK; router-call audit resolves 56 router methods with 0 unknown calls
++  and 0 arg-count mismatches; no build/manifest/permission change; pre-existing tests untouched.
++- **UNVERIFIED:** compilation, unit execution, and device interaction (create → rename → add →
++  reorder → delete) run on the owner machine per the gate list below.
++
++### Phase D proposal (documented, NOT applied)
++- `references/phase-d-proposal.md` maps Room, Coil/art path, media3-ui, POST_NOTIFICATIONS, R8, and
++  backend catalog source to required written approvals and post-apply evidence. No Gradle, version
++  catalog, or manifest line was changed.
++
+ ### Gates to run on the owner machine (unchanged from AGENTS.md)
+ 1. `./gradlew :app:testDebugUnitTest` — expect 75 pre-existing tests green + 3 new Phase A tests.
+ 2. `./gradlew :app:lintDebug` — expect 0 errors.
+diff --git a/docs/agent-loop/STATE.md b/docs/agent-loop/STATE.md
+index 3b7da7f..8b38f11 100644
+--- a/docs/agent-loop/STATE.md
++++ b/docs/agent-loop/STATE.md
+@@ -112,3 +112,8 @@ Device (API 36/37 x86_64 emulator, `Medium_Phone`, 1080x2400@420 = ~411dp, headl
+ - Unit tests / lint / APK / instrumented playback: **UNVERIFIED here** — run `scripts/verify.sh` and the
+   connected test above on the owner machine before review. Enhanced now-playing sheet swap held for
+   device proof. Phase D items (Room/Coil/notification/R8/backend) remain approval-gated and untouched.
++- 2026-11-24 C2 addendum (`feat/mornica-spotify-phase-c-playlist-crud`): playlist create/rename/delete/
++  add-current-track added on the `PlaylistStore` seam with `PlaylistListScreen` + extended detail
++  screen; two pure-JUnit cases added. Router-call signature audit green (56 methods, 0 unknown).
++  Compilation and device flow remain UNVERIFIED; Phase D approval packet captured in
++  `references/phase-d-proposal.md`.
+-- 
+2.34.1
+

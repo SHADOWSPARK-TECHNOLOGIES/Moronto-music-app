@@ -659,6 +659,24 @@ class PlaybackRouter(
     playLocalTrack(prevTrack)
   }
 
+  /**
+   * Phase C: remove an entry from the active queue list shown in the enhanced player.
+   * Additive display-state helper; actual playback always rebuilds through [playLocalTrack]
+   * and the existing controller — no second player, no bypass of the rights gate.
+   */
+  fun removeFromQueue(trackId: String) {
+    _state.update { current ->
+      current.copy(queueTrackIds = current.queueTrackIds.filterNot { id -> id == trackId })
+    }
+  }
+
+  /** Phase C: jump to a queue entry by index and play it through the existing local path. */
+  fun playQueueIndex(index: Int) {
+    val current = _state.value
+    val trackId = current.queueTrackIds.getOrNull(index) ?: return
+    current.localTracks.firstOrNull { it.id == trackId }?.let { playLocalTrack(it) }
+  }
+
   fun toggleShuffle() {
     val current = _state.value
     val nextShuffle = !current.shuffleEnabled

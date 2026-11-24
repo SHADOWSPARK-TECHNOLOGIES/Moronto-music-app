@@ -1,0 +1,3006 @@
+From 684a3b415c6c2702a7a4e02c76a274f65a0018d7 Mon Sep 17 00:00:00 2001
+From: mornica-spotify-bot <spotify-grade-bot@shadowspark.local>
+Date: Tue, 24 Nov 2026 13:53:59 +0100
+Subject: [PATCH] chore(mornica-spotify): install upgrade skill under
+ .agents/skills for repo agents
+
+---
+ .../mornica-spotify-grade-upgrade/SKILL.md    |  78 +++++
+ .../assets/ai-studio/00-sync-prompt.md        |  37 +++
+ .../assets/ai-studio/01-output-protocol.md    |  46 +++
+ .../assets/ai-studio/02-phase-a-prompt.md     |  24 ++
+ .../assets/ai-studio/03-phase-b-prompt.md     |  28 ++
+ .../assets/ai-studio/04-phase-c-prompt.md     |  30 ++
+ .../assets/ai-studio/05-phase-d-prompt.md     |  20 ++
+ .../templates/config/app-build.snippet.kts    |  18 ++
+ .../config/libs.versions.snippet.toml         |  15 +
+ .../templates/config/manifest.snippet.xml     |   5 +
+ .../core/reco/OnDeviceRecommender.kt          |  80 +++++
+ .../core/state/SleepTimerController.kt        |  41 +++
+ .../data/local/PlaylistRepository.kt          | 141 +++++++++
+ .../patches/existing-file-patches.md          | 177 +++++++++++
+ .../templates/tests/HomeFeedModelTest.kt      |  55 ++++
+ .../tests/OnDeviceRecommenderTest.kt          |  88 ++++++
+ .../templates/tests/PlaylistRepositoryTest.kt |  69 +++++
+ .../ui/components/ShelfComponents.kt          | 226 ++++++++++++++
+ .../assets/templates/ui/home/HomeFeedModel.kt |  38 +++
+ .../templates/ui/home/HomeFeedScreen.kt       | 114 +++++++
+ .../templates/ui/library/DownloadsScreen.kt   | 158 ++++++++++
+ .../assets/templates/ui/nav/MornicaRoute.kt   |  33 ++
+ .../templates/ui/player/NowPlayingEnhanced.kt | 291 ++++++++++++++++++
+ .../ui/playlist/PlaylistDetailScreen.kt       | 178 +++++++++++
+ .../ui/playlist/PlaylistListScreen.kt         | 139 +++++++++
+ .../templates/ui/search/SearchScreen.kt       | 123 ++++++++
+ .../templates/ui/settings/SettingsScreen.kt   | 131 ++++++++
+ .../references/data-source-contract.md        |  50 +++
+ .../references/feature-matrix.md              |  27 ++
+ .../references/integration-map.md             |  51 +++
+ .../references/phase-d-proposal.md            |  33 ++
+ .../references/phased-plan.md                 |  79 +++++
+ .../scripts/template_consistency_check.sh     |  71 +++++
+ .../scripts/verify.sh                         |  28 ++
+ 34 files changed, 2722 insertions(+)
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/SKILL.md
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/00-sync-prompt.md
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/01-output-protocol.md
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/02-phase-a-prompt.md
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/03-phase-b-prompt.md
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/04-phase-c-prompt.md
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/05-phase-d-prompt.md
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/config/app-build.snippet.kts
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/config/libs.versions.snippet.toml
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/config/manifest.snippet.xml
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/core/reco/OnDeviceRecommender.kt
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/core/state/SleepTimerController.kt
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/data/local/PlaylistRepository.kt
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/patches/existing-file-patches.md
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/tests/HomeFeedModelTest.kt
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/tests/OnDeviceRecommenderTest.kt
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/tests/PlaylistRepositoryTest.kt
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/components/ShelfComponents.kt
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/home/HomeFeedModel.kt
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/home/HomeFeedScreen.kt
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/library/DownloadsScreen.kt
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/nav/MornicaRoute.kt
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/player/NowPlayingEnhanced.kt
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/playlist/PlaylistDetailScreen.kt
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/playlist/PlaylistListScreen.kt
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/search/SearchScreen.kt
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/settings/SettingsScreen.kt
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/references/data-source-contract.md
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/references/feature-matrix.md
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/references/integration-map.md
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/references/phase-d-proposal.md
+ create mode 100644 .agents/skills/mornica-spotify-grade-upgrade/references/phased-plan.md
+ create mode 100755 .agents/skills/mornica-spotify-grade-upgrade/scripts/template_consistency_check.sh
+ create mode 100755 .agents/skills/mornica-spotify-grade-upgrade/scripts/verify.sh
+
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/SKILL.md b/.agents/skills/mornica-spotify-grade-upgrade/SKILL.md
+new file mode 100644
+index 0000000..8e09024
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/SKILL.md
+@@ -0,0 +1,78 @@
++---
++name: mornica-spotify-grade-upgrade
++description: Upgrade the Moronto Mornica native Android app (Kotlin/Jetpack Compose/Material 3/Media3; GitHub SHADOWSPARK-TECHNOLOGIES/Moronto-music-app) toward a Spotify-grade information architecture — home feed shelves, search, playlists with reorder, downloads screen, settings, enhanced now-playing with queue + sleep timer, on-device recommendations — using drop-in Compose/Kotlin templates that integrate with the existing PlaybackRouter, MornicaRuntime, and rights-gate architecture. Use when the user asks to make the music app "Spotify-like", add home/search/playlist/download/settings/queue features, improve the player UX, build a feature-upgrade contract for Hermes, or plan the next development phase of Mornica. Enforces the repo's default-deny rights gate, YouTube ToS boundary, and Play Store policy guardrails; never bypasses compliance.
++---
++
++# Mornica — Spotify-grade feature upgrade (templates + execution workflow)
++
++## Purpose
++
++Raise Mornica from a working offline player + demo catalog to a Spotify-grade **information architecture and interaction model** (shelves, search, playlists, downloads, queue, settings, recommendations) while keeping Mornica's own Midnight Slate / Jade / Amber brand system. This skill copies **patterns and ergonomics**, not Spotify branding, colors, assets, or code.
++
++Target repo: `SHADOWSPARK-TECHNOLOGIES/Moronto-music-app`, package `com.shadowspark.morontomornica`, Kotlin 2.2.10, Compose BOM, Media3 1.5.1, minSdk 26 / targetSdk 36.
++
++## Hard guardrails (from repo AGENTS.md — non-negotiable, never "bypassed")
++
++1. `LicensedCatalogRights.evaluate(track, CatalogAccess.*, territory)` runs **before any MediaItem reaches ExoPlayer**. Default-deny. No new playback path skips it.
++2. Never allow `youtube.com` / `youtu.be` / `googlevideo.com` URIs into the Media3 player. No stream extraction, ripping, or YouTube audio downloads. YouTube remains an external, clearly-labeled discovery surface only.
++3. Demo fixtures stay visibly labeled `DEMO` with `licenseReference = DEMO-*`. Never fabricate `rightsConfirmed = true` for a track without an authenticated backend agreement.
++4. No push, merge, release signing, Play Console mutation, or deployment without explicit human approval. This skill builds code and verifies locally only.
++5. No surprise dependencies, permissions, global config, or backend changes. New dependencies (Room, Coil, lifecycle-viewmodel-compose, media3-ui) exist only as commented snippets under `assets/templates/config/` and require owner approval before wiring.
++6. Preserve every existing test. After each phase the gates below must stay green; never delete or weaken an existing test.
++7. Report results separately: **unit-verified / build-verified / device-verified / unverified**. No self-asserted success; two failures on the same cause → stop, preserve exact errors, propose fix, wait.
++
++## Architecture invariants (reuse, don't replace)
++
++- State source of truth: `domain/PlaybackRouter.kt` exposing `state: StateFlow<MornicaUiState>`. New screens consume `uiState` + call router methods; do not fork a second state holder.
++- Wiring singleton: `domain/MornicaRuntime.kt` (router, localRepo, youtubeRepo, download wiring). New repositories attach there, idempotently, from `MainActivity.onCreate`.
++- Player engine: `LocalAudioController` / `Media3LocalAudioController` + `LocalAudioPlaybackService` (Media3 `MediaSessionService`). New transport calls go through the router/controller interface; never instantiate a second ExoPlayer.
++- Catalog downloads: `CatalogDownloadManager` / `CatalogDownloadService` / `DownloadStore` JSON seam; `OfflineReadinessVerifier` gates "Ready offline" on real Media3 `DownloadIndex` bytes.
++- Brand tokens: `ui/MornicaTheme.kt` (`MornicaEmerald`, `MornicaCyan`, `MornicaAmber*`, `MornicaSlate*`, `MornicaTokens`). New UI imports these; do not define competing color sets.
++
++## Install in the repo
++
++Copy this whole folder into the repo at `.agents/skills/mornica-spotify-grade-upgrade/` (sibling of the existing `.agents/skills/mornica-*` skills) so Hermes and other repo agents discover it. `scripts/verify.sh` locates the repo root automatically from that location.
++
++## Template rules
++
++1. Templates under `assets/templates/` are **additive new files**. Place each at its target path from `references/integration-map.md`.
++2. Existing files (`MornicaApp.kt`, `MainActivity.kt`, `MornicaRuntime`, build files) are changed only via the minimal patches in `assets/templates/patches/existing-file-patches.md` — small, reversible diffs.
++3. Phase A/B templates use only existing dependencies (Compose, Material3, coroutines, media3, org.json on-device). Phase C/D optional deps stay behind the config snippets until approved.
++4. Pure-Kotlin logic (recommender, playlist store interface, shelf models) is framework-free so it runs under JUnit + Robolectric like the existing suite.
++
++## Execution workflow
++
++Read `references/phased-plan.md` first. Run one phase at a time:
++
++1. Sync: `git fetch origin && git checkout main && git pull origin main`, then branch `feat/mornica-spotify-phase<N>-<slug>`.
++2. Copy the phase's template files to the target paths; apply the listed patches.
++3. Run gates (`scripts/verify.sh`):
++   - `./gradlew :app:testDebugUnitTest` — existing tests stay green plus new phase tests.
++   - `./gradlew :app:lintDebug` — 0 errors.
++   - `./gradlew :app:assembleDebug` — debug APK builds.
++   - When touching playback: `./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.shadowspark.morontomornica.LicensedCatalogPlaybackInstrumentedTest`.
++4. Conventional commits: `feat(mornica-spotify): …`, `test(mornica-spotify): …`, `refactor(mornica-spotify): …`.
++5. Update `docs/agent-loop/STATE.md` and `docs/EXECUTION_LOG.md` with unit/build/device/unverified labels before opening a PR.
++6. PR targets `main`, uses `.github/PULL_REQUEST_TEMPLATE.md`, lists gates per verified category. No merge without owner approval.
++
++## Resource map
++
++- `references/feature-matrix.md` — Spotify-equivalent feature → Mornica today → target → template file → phase.
++- `references/integration-map.md` — every template: source path, target path, existing symbols used, new symbols, required approval.
++- `references/phased-plan.md` — phases A–D scope, acceptance criteria, gates, owner approvals.
++- `references/data-source-contract.md` — specialized licensed-catalog data source contract (backend seam, schema, signed URLs, rights gate, NG region).
++- `assets/templates/core/` — pure logic: recommender, sleep timer, route holder.
++- `assets/templates/data/` — playlist persistence seam (JSON now, Room-ready interface).
++- `assets/templates/ui/` — Compose screens and components.
++- `assets/templates/tests/` — new unit tests matching existing package/style.
++- `assets/templates/config/` — dependency/manifest snippets (approval-gated, not applied automatically).
++- `assets/templates/patches/existing-file-patches.md` — minimal diffs to existing files.
++- `assets/ai-studio/` — paste-ready prompts for Google AI Studio when the repo is imported there: `00-sync-prompt.md` first, then `02`–`05` per phase; `01-output-protocol.md` governs file-path-delimited Kotlin output. AI Studio cannot run Gradle, so gates stay local (`scripts/verify.sh`); every unverified claim is labeled.
++- `scripts/verify.sh` — run the three local gates; `scripts/template_consistency_check.sh` — package/path and guardrail-token consistency over templates.
++
++## Definition of done (per phase)
++
++- All template files at target paths; patches applied; existing tests untouched and green.
++- New tests green; lint 0 errors; debug APK builds.
++- UI changes checked on emulator; screenshots + uiautomator tree recorded in `docs/EXECUTION_LOG.md` per existing evidence practice.
++- No new permission, dependency, network call, or rights claim without an explicit owner-approval note in the commit message and PR body.
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/00-sync-prompt.md b/.agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/00-sync-prompt.md
+new file mode 100644
+index 0000000..11bfb1c
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/00-sync-prompt.md
+@@ -0,0 +1,37 @@
++# AI Studio sync prompt — paste FIRST in a new chat with the imported repo attached
++
++```text
++You are the senior Android engineer for Moronto Mornica (package com.shadowspark.morontomornica), working ONLY against the imported repository files. Do NOT scaffold a new web app, Flutter app, or standalone demo — every change belongs to this Gradle / Kotlin / Jetpack Compose project.
++
++REPO FACTS (verify by reading files; do not contradict the actual code):
++- Baseline: main HEAD aa5d78d. Kotlin 2.2.10, AGP 9.1.1, Gradle 9.8.2, Media3 1.5.1, Compose BOM; minSdk 26, targetSdk 36.
++- State holder: domain/PlaybackRouter.kt exposes `state: StateFlow<MornicaUiState>`; wiring singleton: domain/MornicaRuntime.kt; player: Media3LocalAudioController + LocalAudioPlaybackService (Media3 MediaSessionService).
++- Catalog rights: domain/LicensedCatalogRights.kt default-deny gate; CatalogDownloadManager / CatalogDownloadService / DownloadStore; OfflineReadinessVerifier gates "Ready offline" on real DownloadIndex bytes.
++- UI: ui/MornicaApp.kt (three bottom-tab PrimaryScreens); ui/MornicaTheme.kt brand tokens; model/MornicaModels.kt.
++- Quality baseline: 75/75 unit tests, 0 lint errors, debug APK builds. Existing tests and their assumptions must stay green and untouched.
++
++HARD GUARDRAILS (from repo AGENTS.md — never bypass):
++1. LicensedCatalogRights.evaluate(track, CatalogAccess.*, territory) runs before any MediaItem reaches ExoPlayer; default-deny.
++2. No youtube.com / youtu.be / googlevideo.com URI enters the player; no stream extraction, ripping, or YouTube download.
++3. Demo records keep ProvenanceStatus.DEMO and licenseReference DEMO-*; never fabricate rightsConfirmed = true.
++4. No push, merge, signing change, Play Console action, dependency/permission addition, or backend change without explicit owner approval.
++5. Do not break existing test assumptions (e.g. PrimaryScreen.entries iterated by the accessibility test); add overlay navigation instead of changing that enum.
++
++ENVIRONMENT LIMITS (state honestly in every report):
++- You cannot run git, Gradle, lint, the emulator, or tests. You generate code and patches only.
++- The owner runs scripts/verify.sh locally. Mark anything not executed as UNVERIFIED; do not claim green tests or a successful build.
++
++PHASE 0 — SYNC REPORT (this turn is READ-ONLY; write no code):
++1. Read in order: AGENTS.md; docs/agent-loop/STATE.md; domain/PlaybackRouter.kt public API; domain/MornicaRuntime.kt; ui/MornicaTheme.kt; model/MornicaModels.kt.
++2. Report: (a) file map loaded; (b) the exact public router methods you will call from new screens; (c) any mismatch between this brief and the actual code, with file:line; (d) the proposed Phase-A file list; (e) anything you refuse to do under the guardrails.
++3. End by asking for the Phase-A prompt. Do not proceed ahead of the owner's paste.
++
++OUTPUT PROTOCOL: for every later turn follow assets/ai-studio/01-output-protocol.md — file-path-delimited Kotlin blocks, minimal patch blocks for existing files, and a completion report labeling unit-verified / build-verified / device-verified / unverified separately.
++```
++
++## How to run it
++
++1. New chat in AI Studio with the repo imported/attached; paste the block above.
++2. Read the sync report; fix any symbol mismatch it flags.
++3. Paste `02-phase-a-prompt.md`, then `03-phase-b-prompt.md`, `04-phase-c-prompt.md`, `05-phase-d-prompt.md` one at a time.
++4. After each phase: copy generated blocks into the repo at the stated paths, run `scripts/verify.sh`, paste the gate output back into the chat for a review turn before the next phase.
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/01-output-protocol.md b/.agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/01-output-protocol.md
+new file mode 100644
+index 0000000..cfc2ab8
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/01-output-protocol.md
+@@ -0,0 +1,46 @@
++# AI Studio output protocol — append to every phase prompt
++
++## New file
++
++```
++=== FILE: app/src/main/java/com/shadowspark/morontomornica/<path>.kt ===
++```kotlin
++package com.shadowspark.morontomornica.<path>
++
++// full file content; 2-space indent; trailing commas; match existing style
++```
++=== END FILE ===
++```
++
++## Existing file — minimal patch only
++
++```
++=== PATCH: app/src/main/java/.../SomeFile.kt ===
++CONTEXT: <unique existing snippet to anchor the edit>
++INSERT AFTER:
++```kotlin
++<block to add>
++```
++=== END PATCH ===
++```
++Or `REPLACE BLOCK:` with old snippet / `---` / new snippet. Never rewrite a whole existing file.
++
++## Completion report (mandatory after every phase)
++
++- **FILES CREATED:** repo-relative paths
++- **FILES PATCHED:** paths + one-line reason
++- **EXISTING SYMBOLS USED:** `symbol → file:line`
++- **UNIT-VERIFIED:** `not executed in AI Studio; pending local ./gradlew :app:testDebugUnitTest`
++- **BUILD-VERIFIED:** `pending local ./gradlew :app:lintDebug :app:assembleDebug`
++- **DEVICE-VERIFIED:** `pending emulator/instrumented run by owner`
++- **UNVERIFIED:** every claim lacking executed evidence
++- **GUARDRAIL CHECKLIST:** items 1–5 from the sync prompt marked OK / N/A + reason
++- **NEXT:** exact next phase prompt name
++
++## Rules
++
++- Package declaration must match the target folder (`core/reco/ → core.reco`, `ui/home/ → ui.home`, …).
++- Pure logic files (recommender, store seam, shelf model) must not import Android framework classes.
++- Screens take `uiState: MornicaUiState` and `router: PlaybackRouter`; never instantiate a second player or state holder.
++- Colors come from `com.shadowspark.morontomornica.ui.*` tokens; do not invent a palette.
++- If the imported code disagrees with this protocol, trust the code and report the mismatch instead of forcing the template.
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/02-phase-a-prompt.md b/.agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/02-phase-a-prompt.md
+new file mode 100644
+index 0000000..62952e8
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/02-phase-a-prompt.md
+@@ -0,0 +1,24 @@
++# Phase A prompt — foundation logic (no visual change)
++
++```text
++Execute Phase A of the Mornica Spotify-grade upgrade. SCOPE: pure logic + persistence seam + tests. No new Composable screens, no dependency additions, no manifest changes, no edits to UI files.
++
++CREATE these files (reference the skill templates in assets/templates/core, assets/templates/data, assets/templates/ui/home, assets/templates/tests when available; otherwise generate conforming code from this brief):
++
++1. core/reco/OnDeviceRecommender.kt — pure Kotlin; recordPlay(trackId, atMs); recentTracks(tracks, limit); favoriteTracks(tracks, favorites); mostPlayed(tracks, limit); topArtists(tracks, maxArtists, perArtist); clear(); historySize(). Only tracks where LocalMediaTrack.isPlayableOffline() qualify. No Android imports.
++2. ui/home/HomeFeedModel.kt — object HomeFeedModel.build(tracks, favorites, recommender): Feed(shelves: List<ShelfModel>, artistShelves: List<ArtistShelf>, totalTracks: Int). Shelves: recent, liked, most played; skip empty shelves.
++3. data/local/PlaylistRepository.kt — interface PlaylistStore { names(); create(name): Boolean; tracks(name); add(name, trackId); removeTrack(name, trackId); rename(old, new); delete(name); move(name, from, to) }; InMemoryPlaylistStore; SharedPrefsPlaylistStore using org.json and SharedPreferences "mornica_playlists"; create rejects blank/duplicate names and persists empty lists. No Room dependency.
++4. ui/nav/MornicaRoute.kt — sealed interface MornicaRoute { HomeFeed, Search, Downloads, Settings, Playlists, PlaylistDetail(name) } + object MornicaNav with MutableStateFlow route; open(route); close().
++5. Tests under app/src/test/java/com/shadowspark/morontomornica/: core/reco/OnDeviceRecommenderTest.kt; data/local/PlaylistRepositoryTest.kt; ui/home/HomeFeedModelTest.kt. Plain JUnit for logic; no Robolectric required.
++
++CONSTRAINTS:
++- Reuse LocalMediaTrack fields exactly as defined in model/MornicaModels.kt.
++- No calls to ExoPlayer, no playback state changes, no network calls.
++- Keep every existing test untouched; these new tests must be additive.
++
++ACCEPTANCE (owner runs locally; you report UNVERIFIED until then):
++- ./gradlew :app:testDebugUnitTest green (75 existing + new Phase-A tests).
++- ./gradlew :app:lintDebug 0 errors; ./gradlew :app:assembleDebug succeeds.
++
++OUTPUT: follow assets/ai-studio/01-output-protocol.md exactly; end with the completion report and the guardrail checklist.
++```
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/03-phase-b-prompt.md b/.agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/03-phase-b-prompt.md
+new file mode 100644
+index 0000000..8525a0c
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/03-phase-b-prompt.md
+@@ -0,0 +1,28 @@
++# Phase B prompt — browse shell (Home, Search, Downloads, Settings overlays)
++
++```text
++Execute Phase B of the Mornica Spotify-grade upgrade. Phase A files exist (OnDeviceRecommender, HomeFeedModel, PlaylistStore, MornicaRoute). SCOPE: additive Compose screens + minimal patches to existing files; keep the three PrimaryScreen bottom tabs unchanged.
++
++CREATE:
++1. ui/components/ShelfComponents.kt — SectionHeader, GenreChip, TrackRowCompact, ShelfRow (horizontal), EmptyStateCard; use Mornica* tokens from ui/MornicaTheme.kt.
++2. ui/home/HomeFeedScreen.kt — shelves from HomeFeedModel.build; actions to open Search and Downloads; plays via router.playLocalTrack(track).
++3. ui/search/SearchScreen.kt — filters local tracks by title/artist/album; mirrors query with router.updateLocalSearchQuery; artist quick chips; plays via router.playLocalTrack.
++4. ui/library/DownloadsScreen.kt — catalogTracks with catalogDownloadStates; COMPLETED → router.playDownloadedCatalogTrack; QUEUED/DOWNLOADING → router.cancelCatalogDownload(track.id); NONE + offlineAllowed → router.requestCatalogDownload(track); streaming-only labeled, no action.
++5. ui/settings/SettingsScreen.kt — Wi-Fi-only Switch bound to uiState.preferWifiOnlyDownloads and router.setWifiOnlyDownloads; privacy button opening PUBLIC_PRIVACY_POLICY_URL; about card.
++
++PATCH existing files (minimal blocks per assets/templates/patches/existing-file-patches.md):
++- domain/PlaybackRouter.kt: the `object MornicaRuntime` at the file tail gains playlistStore (default InMemoryPlaylistStore) and recommender; add onTrackPlayed hook there (there is no separate MornicaRuntime.kt file).
++- MainActivity.kt: after wireCatalogDownloads, attach SharedPrefsPlaylistStore(applicationContext) and wire onTrackPlayed → recommender.recordPlay.
++- ui/MornicaApp.kt: collect MornicaNav.route; render overlays for Search/Downloads/Settings/PlaylistDetail/HomeFeed; extend BackHandler to close an open overlay first. Do NOT modify PrimaryScreen.entries.
++
++CONSTRAINTS:
++- No new dependency, permission, or icon outside material-icons-extended already in use.
++- No second ExoPlayer; transport actions route through the router.
++- Download rows must never call a playback method for a non-COMPLETED state.
++
++ACCEPTANCE (owner runs locally):
++- testDebugUnitTest green incl. existing MornicaAccessibilityTest; lintDebug 0 errors; assembleDebug OK.
++- Device smoke (owner/emulator): open each overlay, play one demo track, toggle Wi-Fi-only, back out cleanly; record screenshots in docs/EXECUTION_LOG.md.
++
++OUTPUT: assets/ai-studio/01-output-protocol.md format; completion report with UNVERIFIED labels for everything not executed locally.
++```
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/04-phase-c-prompt.md b/.agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/04-phase-c-prompt.md
+new file mode 100644
+index 0000000..bb3881b
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/04-phase-c-prompt.md
+@@ -0,0 +1,30 @@
++# Phase C prompt — player depth (queue, sleep timer, share, playlist detail)
++
++```text
++Execute Phase C of the Mornica Spotify-grade upgrade. Phases A and B are merged/green. SCOPE: enhanced now-playing surface, queue management, playlist detail; playback still flows through the existing Media3 controller.
++
++CREATE:
++1. core/state/SleepTimerController.kt — constructor `SleepTimerController(onFire: () -> Unit)`; `start(minutes: Int)`, `cancel()`, `active`, `remainingMinutes`. The onFire callback calls router.toggleLocalPlayPause() from the UI wiring; the controller never touches a player and takes no lambda on start().
++2. ui/player/NowPlayingEnhanced.kt — NowPlayingEnhancedSheet(uiState, router, sleepTimer, onRemoveFromQueue, onCollapse): artwork slot (existing token gradient + MusicNote icon; no image dependency), title/artist, slider via router.seekLocalTo, transport (shuffle/prev/play-pause/next/repeat) via existing router methods, sleep-timer dialog (15/30/45/60) that calls sleepTimer.start(minutes), share ACTION_SEND plain text with title + artist only, queue list from queueTrackIds with remove action.
++3. ui/playlist/PlaylistDetailScreen.kt — reads MornicaRuntime.playlistStore; rows with play, move up/down (store.move), remove (store.removeTrack); play-all plays the first playable track; header offers rename dialog (store.rename), delete confirmation (store.delete), and an add-current-track button (store.add for the active local track, playable-offline only).
++4. ui/playlist/PlaylistListScreen.kt — lists store.names() with track counts; New-playlist dialog calls store.create(name) then opens the detail; tap a row to open PlaylistDetail.
++
++PATCH:
++- data/local/PlaylistRepository.kt: add create(name) to the interface and both implementations (InMemory + SharedPrefs; persist after create).
++- domain/PlaybackRouter.kt: add removeFromQueue(trackId) and playQueueIndex(index); in playLocalTrack success branch invoke MornicaRuntime.onTrackPlayed?.invoke(track.id).
++- ui/MornicaApp.kt: instantiate SleepTimerController with a pause callback; add the Playlists overlay branch (PlaylistListScreen) and a "Playlists" overflow-menu entry (Icons.AutoMirrored.Filled.QueueMusic); render NowPlayingEnhancedSheet in place of the existing full sheet ONLY after the owner's device proof; otherwise keep the old sheet and leave the enhanced file unreferenced behind the gate.
++
++CONSTRAINTS:
++- Sleep timer fires a pause command through the router; no standalone player, no audio focus change outside the controller.
++- Share intent sends text only; never a file URI or media stream URL.
++- Queue removal only affects queueTrackIds; it must not delete device files or download records.
++- Playlist CRUD mutates only the store; router.addToPlaylist (legacy in-state map) and device files are untouched.
++
++ACCEPTANCE (owner runs locally):
++- testDebugUnitTest green; lintDebug 0 errors; assembleDebug OK.
++- Instrumented: ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.shadowspark.morontomornica.LicensedCatalogPlaybackInstrumentedTest stays green.
++- Device proof: play demo, open enhanced sheet, remove a queue item, set a 1-minute timer, verify pause callback; record in docs/EXECUTION_LOG.md.
++- Playlist flow proof: create → rename → add current track → reorder → remove → delete; relaunch and confirm persistence; record here.
++
++OUTPUT: assets/ai-studio/01-output-protocol.md format; mark device items UNVERIFIED until the owner runs them.
++```
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/05-phase-d-prompt.md b/.agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/05-phase-d-prompt.md
+new file mode 100644
+index 0000000..d2e0281
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/ai-studio/05-phase-d-prompt.md
+@@ -0,0 +1,20 @@
++# Phase D prompt — approval-gated hardening (do not apply dependencies without owner sign-off)
++
++```text
++Execute Phase D planning and, item by item with explicit owner approval, hardening. Default state: PROPOSE ONLY. For each item below, output a short implementation plan and the exact files/diffs; do not add dependencies, manifest entries, or build-type changes until the owner approves that item in writing.
++
++ITEMS (full approval/evidence table: references/phase-d-proposal.md):
++1. Room persistence behind PlaylistStore: config/libs.versions.snippet.toml + config/app-build.snippet.kts snippets; entities/DAOs; replace SharedPrefsPlaylistStore behind the same interface; keep InMemoryPlaylistStore for tests. Requires KSP (plugin already pinned in catalog).
++2. Album art: optional MediaStore Albums.ALBUM_ART loader (no new permission) OR Coil (dependency snippet); artwork slot in NowPlayingEnhanced consumes it gracefully when null.
++3. media3-ui 1.5.1 (config snippets) only if a PlayerView/compact controller replaces custom transport; existing LocalAudioPlaybackService session and rights gate unchanged.
++4. POST_NOTIFICATIONS manifest entry (config/manifest.snippet.xml) only if Media3 notification prominence targets API 33+.
++5. Release hardening: R8/minify + shrinkResources (config snippet); release signing remains owner-only — never generate, commit, or print keystore material.
++6. Licensed backend source per references/data-source-contract.md: CatalogSource implementation shape, Firestore schema, signed-URL rule, rights-gate tests; no network call ships until the owner supplies a backend and keys.
++
++RULES:
++- Every approved item lands as its own branch/PR with the approval note in the PR body.
++- Gates after each item: testDebugUnitTest green, lintDebug 0 errors, assembleDebug OK; playback items also run the instrumented test.
++- No YouTube extraction logic, no fabricated rights, no store-publishing action.
++
++OUTPUT: for each item: PLAN, FILES, DIFFS (if approved), GATE EXPECTATIONS, UNVERIFIED notes. Reuse assets/templates/config snippets verbatim rather than inventing new versions.
++```
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/config/app-build.snippet.kts b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/config/app-build.snippet.kts
+new file mode 100644
+index 0000000..64b6e3e
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/config/app-build.snippet.kts
+@@ -0,0 +1,18 @@
++// Phase D — approval-gated additions for app/build.gradle.kts.
++// Leave commented until the owner approves the specific dependency.
++
++// plugins { ... } add only when Room is adopted:
++// alias(libs.plugins.google.devtools.ksp)
++
++// dependencies { ... } add as approved:
++// implementation(libs.androidx.room.runtime)
++// ksp(libs.androidx.room.compiler)
++// implementation(libs.coil.compose)        // MediaStore album art images
++// implementation(libs.androidx.media3.ui)    // Media3 player UI helpers / artwork metadata
++
++// Release hardening (separate approval; signing remains owner-only):
++// release {
++//   isMinifyEnabled = true
++//   isShrinkResources = true
++//   proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
++// }
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/config/libs.versions.snippet.toml b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/config/libs.versions.snippet.toml
+new file mode 100644
+index 0000000..2ed2e6e
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/config/libs.versions.snippet.toml
+@@ -0,0 +1,15 @@
++# Phase D optional dependencies — apply ONLY with owner approval.
++# Copy the needed lines into gradle/libs.versions.toml under the matching tables.
++# KSP plugin id "com.google.devtools.ksp" is already pinned in [plugins] (ksp = "2.3.5");
++# Room needs the KSP plugin applied in app/build.gradle.kts.
++
++[versions]
++room = "2.6.1"
++coil = "2.7.0"
++media3Ui = "1.5.1"
++
++[libraries]
++androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
++androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
++coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
++androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3Ui" }
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/config/manifest.snippet.xml b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/config/manifest.snippet.xml
+new file mode 100644
+index 0000000..a43aceb
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/config/manifest.snippet.xml
+@@ -0,0 +1,5 @@
++<!-- Phase D, approval-gated.
++     Add to AndroidManifest.xml <manifest> only if Media3 notification artwork /
++     custom notification actions target Android 13+ (API 33) and the notification
++     actually posts from the foreground media service. Do not add "just in case". -->
++<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/core/reco/OnDeviceRecommender.kt b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/core/reco/OnDeviceRecommender.kt
+new file mode 100644
+index 0000000..78e0f49
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/core/reco/OnDeviceRecommender.kt
+@@ -0,0 +1,80 @@
++package com.shadowspark.morontomornica.core.reco
++
++import com.shadowspark.morontomornica.model.LocalMediaTrack
++
++data class ShelfModel(
++  val key: String,
++  val title: String,
++  val tracks: List<LocalMediaTrack>,
++)
++
++data class ArtistShelf(
++  val artist: String,
++  val tracks: List<LocalMediaTrack>,
++)
++
++/**
++ * On-device, zero-network recommendation heuristics. Pure Kotlin (no Android imports)
++ * so the rules run under plain JUnit. Listening history stays in memory on-device;
++ * nothing about the user's library leaves the device (privacy policy invariant).
++ */
++class OnDeviceRecommender(
++  private val clockMs: () -> Long = { System.currentTimeMillis() },
++) {
++  private data class PlayCount(
++    val trackId: String,
++    var plays: Int,
++    var lastPlayedAtMs: Long,
++  )
++
++  private val events = mutableMapOf<String, PlayCount>()
++
++  fun recordPlay(trackId: String, atMs: Long = clockMs()) {
++    val existing = events[trackId]
++    if (existing == null) {
++      events[trackId] = PlayCount(trackId, 1, atMs)
++    } else {
++      existing.plays += 1
++      existing.lastPlayedAtMs = atMs
++    }
++  }
++
++  fun recentTracks(tracks: List<LocalMediaTrack>, limit: Int = 10): List<LocalMediaTrack> {
++    val byId = tracks.filter { it.isPlayableOffline() }.associateBy { it.id }
++    return events.values
++      .sortedByDescending { it.lastPlayedAtMs }
++      .mapNotNull { byId[it.trackId] }
++      .distinct()
++      .take(limit)
++  }
++
++  fun favoriteTracks(tracks: List<LocalMediaTrack>, favorites: Set<String>): List<LocalMediaTrack> =
++    tracks.filter { it.isPlayableOffline() && it.id in favorites }
++
++  fun mostPlayed(tracks: List<LocalMediaTrack>, limit: Int = 10): List<LocalMediaTrack> {
++    val byId = tracks.filter { it.isPlayableOffline() }.associateBy { it.id }
++    return events.values
++      .sortedByDescending { it.plays }
++      .mapNotNull { byId[it.trackId] }
++      .distinct()
++      .take(limit)
++  }
++
++  fun topArtists(
++    tracks: List<LocalMediaTrack>,
++    maxArtists: Int = 6,
++    perArtist: Int = 4,
++  ): List<ArtistShelf> =
++    tracks
++      .filter { it.isPlayableOffline() }
++      .groupBy { it.artist }
++      .filter { it.value.size >= 2 }
++      .entries
++      .sortedByDescending { it.value.size }
++      .take(maxArtists)
++      .map { ArtistShelf(it.key, it.value.take(perArtist)) }
++
++  fun historySize(): Int = events.size
++
++  fun clear() = events.clear()
++}
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/core/state/SleepTimerController.kt b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/core/state/SleepTimerController.kt
+new file mode 100644
+index 0000000..69af0e7
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/core/state/SleepTimerController.kt
+@@ -0,0 +1,41 @@
++package com.shadowspark.morontomornica.core.state
++
++import android.os.Handler
++import android.os.Looper
++
++/**
++ * Fires one callback after a number of minutes; cancel removes the pending callback.
++ * UI-side only: the resulting pause must flow through PlaybackRouter.toggleLocalPlayPause()
++ * so the real Media3 controller and its state remain authoritative. No second player.
++ */
++class SleepTimerController(
++  private val handler: Handler = Handler(Looper.getMainLooper()),
++  private val onFire: () -> Unit,
++) {
++  private var pending: Runnable? = null
++
++  var remainingMinutes: Int = 0
++    private set
++
++  val active: Boolean get() = pending != null
++
++  fun start(minutes: Int) {
++    cancel()
++    if (minutes <= 0) return
++    val runnable =
++      Runnable {
++        pending = null
++        remainingMinutes = 0
++        onFire()
++      }
++    pending = runnable
++    remainingMinutes = minutes
++    handler.postDelayed(runnable, minutes * 60_000L)
++  }
++
++  fun cancel() {
++    pending?.let { handler.removeCallbacks(it) }
++    pending = null
++    remainingMinutes = 0
++  }
++}
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/data/local/PlaylistRepository.kt b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/data/local/PlaylistRepository.kt
+new file mode 100644
+index 0000000..65c0eec
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/data/local/PlaylistRepository.kt
+@@ -0,0 +1,141 @@
++package com.shadowspark.morontomornica.data.local
++
++import android.content.Context
++import org.json.JSONArray
++import org.json.JSONObject
++
++/**
++ * Playlist persistence seam. The JSON SharedPreferences implementation mirrors the existing
++ * FileDownloadStore pattern; a Room implementation may later replace [SharedPrefsPlaylistStore]
++ * behind this same interface without touching UI code.
++ *
++ * Playlists track track IDs only; resolution to LocalMediaTrack stays in the UI/repository layer.
++ */
++interface PlaylistStore {
++  fun names(): List<String>
++  fun create(name: String): Boolean
++  fun tracks(playlistName: String): List<String>
++  fun add(playlistName: String, trackId: String): Boolean
++  fun removeTrack(playlistName: String, trackId: String): Boolean
++  fun rename(oldName: String, newName: String): Boolean
++  fun delete(playlistName: String): Boolean
++  fun move(playlistName: String, fromIndex: Int, toIndex: Int): Boolean
++}
++
++class InMemoryPlaylistStore : PlaylistStore {
++  private val playlists = LinkedHashMap<String, MutableList<String>>()
++
++  override fun names(): List<String> = playlists.keys.toList()
++
++  override fun create(name: String): Boolean {
++    val trimmed = name.trim()
++    if (trimmed.isBlank() || playlists.containsKey(trimmed)) return false
++    playlists[trimmed] = mutableListOf()
++    return true
++  }
++
++  override fun tracks(playlistName: String): List<String> =
++    playlists[playlistName].orEmpty().toList()
++
++  override fun add(playlistName: String, trackId: String): Boolean {
++    if (trackId.isBlank()) return false
++    val list = playlists.getOrPut(playlistName) { mutableListOf() }
++    if (list.contains(trackId)) return false
++    list.add(trackId)
++    return true
++  }
++
++  override fun removeTrack(playlistName: String, trackId: String): Boolean {
++    val list = playlists[playlistName] ?: return false
++    val removed = list.remove(trackId)
++    if (list.isEmpty()) playlists.remove(playlistName)
++    return removed
++  }
++
++  override fun rename(oldName: String, newName: String): Boolean {
++    if (oldName == newName || newName.isBlank()) return false
++    val list = playlists.remove(oldName) ?: return false
++    playlists[newName] = list
++    return true
++  }
++
++  override fun delete(playlistName: String): Boolean = playlists.remove(playlistName) != null
++
++  override fun move(playlistName: String, fromIndex: Int, toIndex: Int): Boolean {
++    val list = playlists[playlistName] ?: return false
++    if (fromIndex !in list.indices || toIndex !in list.indices) return false
++    if (fromIndex == toIndex) return false
++    val item = list.removeAt(fromIndex)
++    list.add(toIndex, item)
++    return true
++  }
++}
++
++class SharedPrefsPlaylistStore(context: Context) : PlaylistStore {
++  private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
++  private val memory = InMemoryPlaylistStore()
++
++  init {
++    load()
++  }
++
++  override fun names(): List<String> = memory.names()
++
++  override fun create(name: String): Boolean = memory.create(name).also { if (it) persist() }
++
++  override fun tracks(playlistName: String): List<String> = memory.tracks(playlistName)
++
++  override fun add(playlistName: String, trackId: String): Boolean =
++    memory.add(playlistName, trackId).also { if (it) persist() }
++
++  override fun removeTrack(playlistName: String, trackId: String): Boolean =
++    memory.removeTrack(playlistName, trackId).also { if (it) persist() }
++
++  override fun rename(oldName: String, newName: String): Boolean =
++    memory.rename(oldName, newName).also { if (it) persist() }
++
++  override fun delete(playlistName: String): Boolean =
++    memory.delete(playlistName).also { if (it) persist() }
++
++  override fun move(playlistName: String, fromIndex: Int, toIndex: Int): Boolean =
++    memory.move(playlistName, fromIndex, toIndex).also { if (it) persist() }
++
++  private fun load() {
++    val raw = prefs.getString(KEY_PLAYLISTS_JSON, null) ?: return
++    runCatching {
++      val root = JSONObject(raw)
++      val list = root.getJSONArray(KEY_PLAYLISTS)
++      for (i in 0 until list.length()) {
++        val entry = list.getJSONObject(i)
++        val name = entry.getString(KEY_NAME)
++        val ids = entry.getJSONArray(KEY_TRACK_IDS)
++        for (j in 0 until ids.length()) {
++          memory.add(name, ids.getString(j))
++        }
++      }
++    }
++  }
++
++  private fun persist() {
++    val root = JSONObject()
++    val arr = JSONArray()
++    memory.names().forEach { name ->
++      val entry = JSONObject()
++      entry.put(KEY_NAME, name)
++      val ids = JSONArray()
++      memory.tracks(name).forEach(ids::put)
++      entry.put(KEY_TRACK_IDS, ids)
++      arr.put(entry)
++    }
++    root.put(KEY_PLAYLISTS, arr)
++    prefs.edit().putString(KEY_PLAYLISTS_JSON, root.toString()).apply()
++  }
++
++  private companion object {
++    const val PREFS_NAME = "mornica_playlists"
++    const val KEY_PLAYLISTS_JSON = "playlists_json"
++    const val KEY_PLAYLISTS = "playlists"
++    const val KEY_NAME = "name"
++    const val KEY_TRACK_IDS = "trackIds"
++  }
++}
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/patches/existing-file-patches.md b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/patches/existing-file-patches.md
+new file mode 100644
+index 0000000..65a2264
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/patches/existing-file-patches.md
+@@ -0,0 +1,177 @@
++# Minimal patches to existing files
++
++Apply one patch per phase. Each block shows the file, insertion point, and code. Do not
++refactor surrounding code; keep diffs small and reversible. Existing tests must stay green.
++
++## Patch 1 — `domain/MornicaRuntime.kt` (Phase A)
++
++Extend the wiring singleton. Insert after the existing `@Volatile` fields:
++
++```kotlin
++  @Volatile var playlistStore: com.shadowspark.morontomornica.data.local.PlaylistStore =
++    com.shadowspark.morontomornica.data.local.InMemoryPlaylistStore()
++  val recommender: com.shadowspark.morontomornica.core.reco.OnDeviceRecommender =
++    com.shadowspark.morontomornica.core.reco.OnDeviceRecommender()
++  @Volatile var onTrackPlayed: ((String) -> Unit)? = null
++```
++
++## Patch 2 — `MainActivity.kt` (Phase B)
++
++In `onCreate`, immediately after `MornicaRuntime.wireCatalogDownloads(appContext)`:
++
++```kotlin
++    MornicaRuntime.playlistStore =
++      com.shadowspark.morontomornica.data.local.SharedPrefsPlaylistStore(applicationContext)
++    MornicaRuntime.onTrackPlayed = { trackId -> MornicaRuntime.recommender.recordPlay(trackId) }
++```
++
++## Patch 3 — `domain/PlaybackRouter.kt` (Phase A hook + Phase C queue helpers)
++
++3a. In `playLocalTrack(track)`, on the successful-play branch (after `_state.value = ...` and
++before `return true`), record history:
++
++```kotlin
++    com.shadowspark.morontomornica.domain.MornicaRuntime.onTrackPlayed?.invoke(track.id)
++```
++
++3b. Add these public helpers next to `skipNext()` / `skipPrevious()`:
++
++```kotlin
++  fun removeFromQueue(trackId: String) {
++    val current = _state.value
++    _state.value = current.copy(queueTrackIds = current.queueTrackIds.filterNot { it == trackId })
++  }
++
++  fun playQueueIndex(index: Int) {
++    val current = _state.value
++    val trackId = current.queueTrackIds.getOrNull(index) ?: return
++    current.localTracks.firstOrNull { it.id == trackId }?.let { playLocalTrack(it) }
++  }
++```
++
++## Patch 4 — `ui/MornicaApp.kt` (Phase B overlay navigation)
++
++4a. Imports:
++
++```kotlin
++import com.shadowspark.morontomornica.ui.nav.MornicaNav
++import com.shadowspark.morontomornica.ui.nav.MornicaRoute
++import com.shadowspark.morontomornica.ui.home.HomeFeedScreen
++import com.shadowspark.morontomornica.ui.search.SearchScreen
++import com.shadowspark.morontomornica.ui.library.DownloadsScreen
++import com.shadowspark.morontomornica.ui.settings.SettingsScreen
++import com.shadowspark.morontomornica.ui.playlist.PlaylistDetailScreen
++import com.shadowspark.morontomornica.domain.MornicaRuntime
++```
++
++4b. At the top of `MornicaApp(...)`, collect the overlay route:
++
++```kotlin
++  val route by com.shadowspark.morontomornica.ui.nav.MornicaNav.route.collectAsState()
++```
++
++4c. Extend the existing `BackHandler` so an open overlay closes first:
++
++```kotlin
++  BackHandler(enabled = route != null || backEnabled) {
++    val active = route
++    if (active != null) {
++      com.shadowspark.morontomornica.ui.nav.MornicaNav.close()
++    } else if (uiState.isNowPlayingExpanded && uiState.activeLocalTrack != null) {
++      router.setNowPlayingExpanded(false)
++    } else {
++      router.selectScreen(PrimaryScreen.MY_MUSIC)
++    }
++  }
++```
++
++(Remove the old `backEnabled` BackHandler block when replacing; keep its branch logic inside the new one.)
++
++4d. Inside the root `Box(...)`, after the existing `when (uiState.currentScreen) { ... }` block, add:
++
++```kotlin
++        route?.let { activeRoute ->
++          when (activeRoute) {
++            MornicaRoute.Search ->
++              SearchScreen(uiState = uiState, router = router, onBack = { MornicaNav.close() })
++            MornicaRoute.Downloads ->
++              DownloadsScreen(uiState = uiState, router = router, onBack = { MornicaNav.close() })
++            MornicaRoute.Settings ->
++              SettingsScreen(uiState = uiState, router = router, onBack = { MornicaNav.close() })
++            is MornicaRoute.PlaylistDetail ->
++              PlaylistDetailScreen(
++                name = activeRoute.name,
++                store = MornicaRuntime.playlistStore,
++                uiState = uiState,
++                router = router,
++                onBack = { MornicaNav.close() },
++              )
++            MornicaRoute.HomeFeed ->
++              HomeFeedScreen(
++                uiState = uiState,
++                router = router,
++                recommender = MornicaRuntime.recommender,
++                onOpenSearch = { MornicaNav.open(MornicaRoute.Search) },
++                onOpenDownloads = { MornicaNav.open(MornicaRoute.Downloads) },
++              )
++          }
++        }
++```
++
++4e. Optional header actions (Phase B): add `Search` and `Settings` `IconButton`s to `MorontoTopHeader`
++calling `MornicaNav.open(MornicaRoute.Search)` / `MornicaNav.open(MornicaRoute.Settings)`. Do not
++change `PrimaryScreen.entries` (the accessibility test iterates it).
++
++4f. Playlist CRUD wiring (Phase C2): import `ui.playlist.PlaylistListScreen`; in the overlay `when`
++add before the `PlaylistDetail` branch:
++
++```kotlin
++  MornicaRoute.Playlists ->
++    PlaylistListScreen(
++      store = MornicaRuntime.playlistStore,
++      onOpenPlaylist = { MornicaNav.open(MornicaRoute.PlaylistDetail(it)) },
++      onBack = { MornicaNav.close() },
++    )
++```
++
++Add a "Playlists" `DropdownMenuItem` (leading icon `Icons.AutoMirrored.Filled.QueueMusic`) that opens
++`MornicaRoute.Playlists`. `PlaylistStore.create(name): Boolean` must exist on both store
++implementations; `SharedPrefsPlaylistStore.persist()` must serialize empty lists.
++
++## Patch 5 — `ui/MornicaApp.kt` enhanced player wiring (Phase C, behind proof)
++
++Keep `NowPlayingFullSheet` until the enhanced variant passes a device proof, then swap:
++
++```kotlin
++  val sleepTimer =
++    remember {
++      com.shadowspark.morontomornica.core.state.SleepTimerController {
++        if (router.state.value.isLocalPlaying) router.toggleLocalPlayPause()
++      }
++    }
++```
++
++Render `NowPlayingEnhancedSheet(uiState, router, sleepTimer, onRemoveFromQueue = router::removeFromQueue, onCollapse = { router.setNowPlayingExpanded(false) })`
++in place of the existing sheet. Record the swap in `docs/EXECUTION_LOG.md` as device-verified before merging.
++
++## Patch 6 — Correctness fixes (any phase, owner-approved before store update)
++
++6a. `app/src/main/java/com/shadowspark/morontomornica/model/MornicaModels.kt`: replace the stale
++branch name in `PUBLIC_PRIVACY_POLICY_URL` with `main`:
++
++```kotlin
++const val PUBLIC_PRIVACY_POLICY_URL =
++  "https://github.com/SHADOWSPARK-TECHNOLOGIES/Moronto-music-app/blob/main/docs/PRIVACY_POLICY.md"
++```
++
++6b. `docs/PLAY_STORE_DECLARATIONS.md`: update both privacy URLs (blob + raw) to the `main` branch.
++
++6c. `app/build.gradle.kts`: `versionName = "1.1.0"` when the next store build is cut; keep
++`versionCode` management owner-driven (closed-testing history already used codes 1–2).
++
++## Guardrail reminders for every patch
++
++- New playback path must still pass `LicensedCatalogRights.evaluate(...)` before a MediaItem reaches ExoPlayer.
++- No `youtube.com` / `youtu.be` / `googlevideo.com` URI enters the player.
++- Demo records keep `DEMO-*` license references and visible DEMO labels.
++- Run `scripts/verify.sh` after each patch; do not proceed on red.
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/tests/HomeFeedModelTest.kt b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/tests/HomeFeedModelTest.kt
+new file mode 100644
+index 0000000..e8024b6
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/tests/HomeFeedModelTest.kt
+@@ -0,0 +1,55 @@
++package com.shadowspark.morontomornica.ui.home
++
++import com.shadowspark.morontomornica.core.reco.OnDeviceRecommender
++import com.shadowspark.morontomornica.model.LocalMediaTrack
++import com.shadowspark.morontomornica.model.ProvenanceStatus
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class HomeFeedModelTest {
++
++  private fun track(id: String, artist: String = "Artist") =
++    LocalMediaTrack(
++      id = id,
++      title = "Title $id",
++      artist = artist,
++      album = "Album",
++      folderName = "Folder",
++      durationMs = 200_000L,
++      uri = "content://media/external/audio/media/$id",
++      provenance = ProvenanceStatus.LOCAL_DEVICE,
++      rightsConfirmed = true,
++    )
++
++  @Test
++  fun build_emptyLibrary_yieldsEmptyShelves() {
++    val feed = HomeFeedModel.build(emptyList(), favorites = emptySet(), recommender = OnDeviceRecommender())
++    assertTrue(feed.shelves.isEmpty())
++    assertTrue(feed.artistShelves.isEmpty())
++    assertEquals(0, feed.totalTracks)
++  }
++
++  @Test
++  fun build_favoritesYieldLikedShelf() {
++    val tracks = listOf(track("1"), track("2"))
++    val feed = HomeFeedModel.build(tracks, favorites = setOf("1"), recommender = OnDeviceRecommender())
++
++    val liked = feed.shelves.firstOrNull { it.key == "liked" }
++    assertTrue(liked != null)
++    assertEquals(1, liked!!.tracks.size)
++    assertEquals("1", liked.tracks.first().id)
++  }
++
++  @Test
++  fun build_recentHistoryYieldsRecentShelf() {
++    val reco = OnDeviceRecommender()
++    reco.recordPlay("1")
++    val tracks = listOf(track("1"), track("2"))
++
++    val feed = HomeFeedModel.build(tracks, favorites = emptySet(), recommender = reco)
++    val recent = feed.shelves.firstOrNull { it.key == "recent" }
++    assertTrue(recent != null)
++    assertEquals("1", recent!!.tracks.first().id)
++  }
++}
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/tests/OnDeviceRecommenderTest.kt b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/tests/OnDeviceRecommenderTest.kt
+new file mode 100644
+index 0000000..5d9d416
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/tests/OnDeviceRecommenderTest.kt
+@@ -0,0 +1,88 @@
++package com.shadowspark.morontomornica.core.reco
++
++import com.shadowspark.morontomornica.model.LocalMediaTrack
++import com.shadowspark.morontomornica.model.ProvenanceStatus
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class OnDeviceRecommenderTest {
++
++  private fun track(
++    id: String,
++    title: String,
++    artist: String,
++    releaseYear: Int = 2026,
++  ) =
++    LocalMediaTrack(
++      id = id,
++      title = title,
++      artist = artist,
++      album = "Album",
++      folderName = "Folder",
++      durationMs = 200_000L,
++      uri = "content://media/external/audio/media/$id",
++      provenance = ProvenanceStatus.LOCAL_DEVICE,
++      rightsConfirmed = true,
++      releaseYear = releaseYear,
++    )
++
++  @Test
++  fun recentTracks_ordersByLatestPlayFirst() {
++    val reco = OnDeviceRecommender(clockMs = { 0L })
++    val a = track("a", "A", "Artist One")
++    val b = track("b", "B", "Artist One")
++    reco.recordPlay("a", atMs = 1_000L)
++    reco.recordPlay("b", atMs = 2_000L)
++
++    val recent = reco.recentTracks(listOf(a, b))
++    assertEquals("b", recent.first().id)
++  }
++
++  @Test
++  fun favoriteTracks_filtersByFavoriteIdsAndPlayable() {
++    val reco = OnDeviceRecommender()
++    val liked = track("liked", "Liked", "Artist Two")
++    val other = track("other", "Other", "Artist Two")
++
++    val result = reco.favoriteTracks(listOf(liked, other), favorites = setOf("liked"))
++    assertEquals(1, result.size)
++    assertEquals("liked", result.first().id)
++  }
++
++  @Test
++  fun mostPlayed_ordersByPlayCountDescending() {
++    val reco = OnDeviceRecommender()
++    val a = track("a", "A", "Artist One")
++    val b = track("b", "B", "Artist One")
++    repeat(3) { reco.recordPlay("a") }
++    repeat(1) { reco.recordPlay("b") }
++
++    val top = reco.mostPlayed(listOf(a, b))
++    assertEquals("a", top.first().id)
++  }
++
++  @Test
++  fun topArtists_groupsArtistsWithAtLeastTwoTracks() {
++    val reco = OnDeviceRecommender()
++    val tracks =
++      listOf(
++        track("a1", "A1", "Asake"),
++        track("a2", "A2", "Asake"),
++        track("b1", "B1", "Solo Artist"),
++      )
++
++    val shelves = reco.topArtists(tracks)
++    assertEquals(1, shelves.size)
++    assertEquals("Asake", shelves.first().artist)
++    assertEquals(2, shelves.first().tracks.size)
++  }
++
++  @Test
++  fun clear_resetsHistory() {
++    val reco = OnDeviceRecommender()
++    reco.recordPlay("a")
++    reco.clear()
++    assertTrue(reco.historySize() == 0)
++  }
++}
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/tests/PlaylistRepositoryTest.kt b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/tests/PlaylistRepositoryTest.kt
+new file mode 100644
+index 0000000..dc94d85
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/tests/PlaylistRepositoryTest.kt
+@@ -0,0 +1,69 @@
++package com.shadowspark.morontomornica.data.local
++
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class PlaylistRepositoryTest {
++
++  private val store = InMemoryPlaylistStore()
++
++  @Test
++  fun add_storesTrackIdsWithoutDuplicates() {
++    assertTrue(store.add("Lagos Commute", "t1"))
++    assertFalse(store.add("Lagos Commute", "t1"))
++    assertEquals(listOf("t1"), store.tracks("Lagos Commute"))
++  }
++
++  @Test
++  fun removeTrack_deletesEmptyPlaylist() {
++    store.add("Mix", "t1")
++    assertTrue(store.removeTrack("Mix", "t1"))
++    assertTrue(store.names().none { it == "Mix" })
++  }
++
++  @Test
++  fun rename_updatesName() {
++    store.add("Old", "t1")
++    assertTrue(store.rename("Old", "New"))
++    assertTrue(store.names().contains("New"))
++    assertFalse(store.names().contains("Old"))
++  }
++
++  @Test
++  fun delete_removesPlaylist() {
++    store.add("Temp", "t1")
++    assertTrue(store.delete("Temp"))
++    assertFalse(store.names().contains("Temp"))
++  }
++
++  @Test
++  fun move_reordersWithinBounds() {
++    val name = "Queue"
++    listOf("t1", "t2", "t3").forEach { store.add(name, it) }
++
++    assertTrue(store.move(name, 0, 2))
++    assertEquals(listOf("t2", "t3", "t1"), store.tracks(name))
++
++    assertFalse(store.move(name, 0, 99))
++  }
++
++  @Test
++  fun create_rejectsBlankAndDuplicateNames() {
++    assertFalse(store.create("   "))
++    assertTrue(store.create("Morning Drive"))
++    assertFalse(store.create("Morning Drive"))
++    assertTrue(store.names().contains("Morning Drive"))
++    assertTrue(store.tracks("Morning Drive").isEmpty())
++  }
++
++  @Test
++  fun rename_preservesTrackIds() {
++    assertTrue(store.create("Working Title"))
++    assertTrue(store.add("Working Title", "t1"))
++    assertTrue(store.rename("Working Title", "Lagos Drive"))
++    assertEquals(listOf("t1"), store.tracks("Lagos Drive"))
++    assertFalse(store.names().contains("Working Title"))
++  }
++}
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/components/ShelfComponents.kt b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/components/ShelfComponents.kt
+new file mode 100644
+index 0000000..51bcc36
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/components/ShelfComponents.kt
+@@ -0,0 +1,226 @@
++package com.shadowspark.morontomornica.ui.components
++
++import androidx.compose.foundation.background
++import androidx.compose.foundation.border
++import androidx.compose.foundation.clickable
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.Spacer
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.size
++import androidx.compose.foundation.layout.width
++import androidx.compose.foundation.lazy.LazyRow
++import androidx.compose.foundation.lazy.items
++import androidx.compose.foundation.shape.CircleShape
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.filled.MusicNote
++import androidx.compose.material3.Card
++import androidx.compose.material3.CardDefaults
++import androidx.compose.material3.Icon
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Surface
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.clip
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.text.style.TextOverflow
++import androidx.compose.ui.unit.dp
++import com.shadowspark.morontomornica.model.LocalMediaTrack
++import com.shadowspark.morontomornica.ui.MornicaAmberStart
++import com.shadowspark.morontomornica.ui.MornicaCyan
++import com.shadowspark.morontomornica.ui.MornicaEmerald
++import com.shadowspark.morontomornica.ui.MornicaSlateBorder
++import com.shadowspark.morontomornica.ui.MornicaSlateCard
++import com.shadowspark.morontomornica.ui.MornicaSlateHeader
++import com.shadowspark.morontomornica.ui.MornicaTextLight
++import com.shadowspark.morontomornica.ui.MornicaTextMuted
++import com.shadowspark.morontomornica.ui.MornicaTokens
++
++@Composable
++fun SectionHeader(
++  title: String,
++  modifier: Modifier = Modifier,
++  actionLabel: String? = null,
++  onAction: (() -> Unit)? = null,
++) {
++  Row(
++    modifier = modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
++    horizontalArrangement = Arrangement.SpaceBetween,
++    verticalAlignment = Alignment.CenterVertically,
++  ) {
++    Text(
++      text = title,
++      style = MaterialTheme.typography.titleSmall,
++      color = MornicaCyan,
++      fontWeight = FontWeight.Bold,
++    )
++    if (actionLabel != null && onAction != null) {
++      Text(
++        text = actionLabel,
++        style = MaterialTheme.typography.labelMedium,
++        color = MornicaEmerald,
++        fontWeight = FontWeight.SemiBold,
++        modifier = Modifier.clickable(onClick = onAction).padding(4.dp),
++      )
++    }
++  }
++}
++
++@Composable
++fun GenreChip(
++  label: String,
++  selected: Boolean,
++  onClick: () -> Unit,
++  modifier: Modifier = Modifier,
++) {
++  Surface(
++    shape = RoundedCornerShape(MornicaTokens.SortPillRadius),
++    color = if (selected) MornicaEmerald else MornicaSlateCard,
++    border = if (selected) null else androidx.compose.foundation.BorderStroke(1.dp, MornicaSlateBorder),
++    modifier = modifier.clickable(onClick = onClick),
++  ) {
++    Text(
++      text = label,
++      style = MaterialTheme.typography.labelMedium,
++      fontWeight = FontWeight.Bold,
++      color = if (selected) androidx.compose.ui.graphics.Color(0xFF04130E) else MornicaTextMuted,
++      modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
++    )
++  }
++}
++
++@Composable
++fun TrackRowCompact(
++  track: LocalMediaTrack,
++  subtitle: String,
++  onClick: () -> Unit,
++  modifier: Modifier = Modifier,
++  trailing: @Composable (() -> Unit)? = null,
++) {
++  Row(
++    modifier =
++      modifier
++        .fillMaxWidth()
++        .clip(RoundedCornerShape(MornicaTokens.CardInnerEmblemRadius))
++        .clickable(onClick = onClick)
++        .padding(vertical = 8.dp, horizontal = 4.dp),
++    verticalAlignment = Alignment.CenterVertically,
++    horizontalArrangement = Arrangement.spacedBy(12.dp),
++  ) {
++    Box(
++      modifier =
++        Modifier
++          .size(44.dp)
++          .clip(RoundedCornerShape(MornicaTokens.CardInnerEmblemRadius))
++          .background(MornicaSlateHeader)
++          .border(1.dp, MornicaSlateBorder, RoundedCornerShape(MornicaTokens.CardInnerEmblemRadius)),
++      contentAlignment = Alignment.Center,
++    ) {
++      Icon(Icons.Default.MusicNote, contentDescription = null, tint = MornicaAmberStart, modifier = Modifier.size(20.dp))
++    }
++    Column(modifier = Modifier.weight(1f)) {
++      Text(
++        text = track.title,
++        style = MaterialTheme.typography.titleSmall,
++        fontWeight = FontWeight.Bold,
++        color = MornicaTextLight,
++        maxLines = 1,
++        overflow = TextOverflow.Ellipsis,
++      )
++      Text(
++        text = subtitle,
++        style = MaterialTheme.typography.bodySmall,
++        color = MornicaTextMuted,
++        maxLines = 1,
++        overflow = TextOverflow.Ellipsis,
++      )
++    }
++    trailing?.invoke()
++  }
++}
++
++@Composable
++fun ShelfRow(
++  title: String,
++  tracks: List<LocalMediaTrack>,
++  onPlay: (LocalMediaTrack) -> Unit,
++  modifier: Modifier = Modifier,
++  onOpenAll: (() -> Unit)? = null,
++) {
++  if (tracks.isEmpty()) return
++  Column(modifier = modifier) {
++    SectionHeader(title = title, actionLabel = if (onOpenAll != null) "See all" else null, onAction = onOpenAll)
++    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
++      items(tracks, key = { it.id }) { track ->
++        Card(
++          colors = CardDefaults.cardColors(containerColor = MornicaSlateCard),
++          shape = RoundedCornerShape(MornicaTokens.CardOuterRadius),
++          border = androidx.compose.foundation.BorderStroke(1.dp, MornicaSlateBorder),
++          modifier = Modifier.width(160.dp).clickable { onPlay(track) },
++        ) {
++          Column(modifier = Modifier.padding(12.dp)) {
++            Box(
++              modifier =
++                Modifier
++                  .fillMaxWidth()
++                  .height(96.dp)
++                  .clip(RoundedCornerShape(MornicaTokens.CardInnerEmblemRadius))
++                  .background(MornicaSlateHeader),
++              contentAlignment = Alignment.Center,
++            ) {
++              Icon(Icons.Default.MusicNote, contentDescription = null, tint = MornicaEmerald, modifier = Modifier.size(36.dp))
++            }
++            Spacer(Modifier.height(8.dp))
++            Text(track.title, style = MaterialTheme.typography.titleSmall, color = MornicaTextLight, maxLines = 1, overflow = TextOverflow.Ellipsis)
++            Text(track.artist, style = MaterialTheme.typography.bodySmall, color = MornicaTextMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
++          }
++        }
++      }
++    }
++  }
++}
++
++@Composable
++fun EmptyStateCard(
++  title: String,
++  body: String,
++  modifier: Modifier = Modifier,
++  actionLabel: String? = null,
++  onAction: (() -> Unit)? = null,
++) {
++  Card(
++    colors = CardDefaults.cardColors(containerColor = MornicaSlateCard),
++    shape = RoundedCornerShape(MornicaTokens.CardOuterRadius),
++    border = androidx.compose.foundation.BorderStroke(1.dp, MornicaSlateBorder),
++    modifier = modifier.fillMaxWidth(),
++  ) {
++    Column(modifier = Modifier.padding(MornicaTokens.CardInnerPadding)) {
++      Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MornicaEmerald)
++      Spacer(Modifier.height(4.dp))
++      Text(body, style = MaterialTheme.typography.bodySmall, color = MornicaTextMuted)
++      if (actionLabel != null && onAction != null) {
++        Spacer(Modifier.height(10.dp))
++        Surface(
++          shape = CircleShape,
++          color = MornicaEmerald,
++          modifier = Modifier.clickable(onClick = onAction),
++        ) {
++          Text(
++            actionLabel,
++            color = androidx.compose.ui.graphics.Color(0xFF04130E),
++            fontWeight = FontWeight.Bold,
++            style = MaterialTheme.typography.labelLarge,
++            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
++          )
++        }
++      }
++    }
++  }
++}
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/home/HomeFeedModel.kt b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/home/HomeFeedModel.kt
+new file mode 100644
+index 0000000..ad9b1ee
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/home/HomeFeedModel.kt
+@@ -0,0 +1,38 @@
++package com.shadowspark.morontomornica.ui.home
++
++import com.shadowspark.morontomornica.core.reco.ArtistShelf
++import com.shadowspark.morontomornica.core.reco.OnDeviceRecommender
++import com.shadowspark.morontomornica.core.reco.ShelfModel
++import com.shadowspark.morontomornica.model.LocalMediaTrack
++
++/**
++ * Pure feed builder for the Home shelf screen. Framework-free so it can be unit-tested
++ * without Robolectric; the Compose screen only renders [Feed].
++ */
++object HomeFeedModel {
++  data class Feed(
++    val shelves: List<ShelfModel>,
++    val artistShelves: List<ArtistShelf>,
++    val totalTracks: Int,
++  )
++
++  fun build(
++    tracks: List<LocalMediaTrack>,
++    favorites: Set<String>,
++    recommender: OnDeviceRecommender,
++  ): Feed {
++    val playable = tracks.filter { it.isPlayableOffline() }
++    val shelves = buildList {
++      val recent = recommender.recentTracks(playable, limit = 10)
++      if (recent.isNotEmpty()) add(ShelfModel("recent", "Recent", recent))
++
++      val liked = recommender.favoriteTracks(playable, favorites)
++      if (liked.isNotEmpty()) add(ShelfModel("liked", "Liked songs", liked))
++
++      val top = recommender.mostPlayed(playable, limit = 10)
++      if (top.isNotEmpty()) add(ShelfModel("top", "Most played", top))
++    }
++    val artistShelves = recommender.topArtists(playable)
++    return Feed(shelves, artistShelves, playable.size)
++  }
++}
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/home/HomeFeedScreen.kt b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/home/HomeFeedScreen.kt
+new file mode 100644
+index 0000000..27de39a
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/home/HomeFeedScreen.kt
+@@ -0,0 +1,114 @@
++package com.shadowspark.morontomornica.ui.home
++
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.PaddingValues
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.Spacer
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.lazy.items
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.filled.DownloadForOffline
++import androidx.compose.material.icons.filled.Search
++import androidx.compose.material3.Icon
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.OutlinedButton
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.remember
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.dp
++import com.shadowspark.morontomornica.core.reco.OnDeviceRecommender
++import com.shadowspark.morontomornica.domain.MornicaUiState
++import com.shadowspark.morontomornica.domain.PlaybackRouter
++import com.shadowspark.morontomornica.ui.MornicaCyan
++import com.shadowspark.morontomornica.ui.MornicaEmerald
++import com.shadowspark.morontomornica.ui.MornicaTextLight
++import com.shadowspark.morontomornica.ui.components.EmptyStateCard
++import com.shadowspark.morontomornica.ui.components.ShelfRow
++
++/**
++ * Home feed: personalized shelves built on-device by [OnDeviceRecommender].
++ * Read-only against [MornicaUiState]; playback goes through [router.playLocalTrack].
++ */
++@Composable
++fun HomeFeedScreen(
++  uiState: MornicaUiState,
++  router: PlaybackRouter,
++  recommender: OnDeviceRecommender,
++  onOpenSearch: () -> Unit,
++  onOpenDownloads: () -> Unit,
++) {
++  val feed =
++    remember(uiState.localTracks, uiState.favoriteTrackIds) {
++      HomeFeedModel.build(uiState.localTracks, uiState.favoriteTrackIds, recommender)
++    }
++
++  LazyColumn(
++    modifier = Modifier.fillMaxSize(),
++    contentPadding = PaddingValues(16.dp),
++    verticalArrangement = Arrangement.spacedBy(12.dp),
++  ) {
++    item {
++      Column {
++        Text(
++          text = "Your music, your way",
++          style = MaterialTheme.typography.headlineSmall,
++          color = MornicaTextLight,
++          fontWeight = FontWeight.ExtraBold,
++        )
++        Text(
++          text = "${feed.totalTracks} playable tracks on this device · offline ready",
++          style = MaterialTheme.typography.labelMedium,
++          color = MornicaCyan,
++        )
++      }
++    }
++
++    item {
++      Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
++        OutlinedButton(onClick = onOpenSearch) {
++          Icon(Icons.Default.Search, contentDescription = null, tint = MornicaEmerald)
++          Text("Search", color = MornicaEmerald, modifier = Modifier.padding(start = 6.dp))
++        }
++        OutlinedButton(onClick = onOpenDownloads) {
++          Icon(Icons.Default.DownloadForOffline, contentDescription = null, tint = MornicaEmerald)
++          Text("Downloads", color = MornicaEmerald, modifier = Modifier.padding(start = 6.dp))
++        }
++      }
++    }
++
++    if (feed.shelves.isEmpty() && feed.artistShelves.isEmpty()) {
++      item {
++        EmptyStateCard(
++          title = "No shelves yet",
++          body = "Play a few tracks and your Recent, Liked and Most played shelves build themselves — on this device only.",
++          actionLabel = "Search my music",
++          onAction = onOpenSearch,
++        )
++      }
++    }
++
++    items(feed.shelves, key = { it.key }) { shelf ->
++      ShelfRow(
++        title = shelf.title,
++        tracks = shelf.tracks,
++        onPlay = { track -> router.playLocalTrack(track) },
++      )
++    }
++
++    items(feed.artistShelves, key = { it.artist }) { artistShelf ->
++      ShelfRow(
++        title = artistShelf.artist,
++        tracks = artistShelf.tracks,
++        onPlay = { track -> router.playLocalTrack(track) },
++      )
++    }
++
++    item { Spacer(Modifier.height(72.dp)) }
++  }
++}
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/library/DownloadsScreen.kt b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/library/DownloadsScreen.kt
+new file mode 100644
+index 0000000..21e9e03
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/library/DownloadsScreen.kt
+@@ -0,0 +1,158 @@
++package com.shadowspark.morontomornica.ui.library
++
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.PaddingValues
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.Spacer
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.lazy.items
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.automirrored.filled.ArrowBack
++import androidx.compose.material3.Button
++import androidx.compose.material3.ButtonDefaults
++import androidx.compose.material3.Card
++import androidx.compose.material3.CardDefaults
++import androidx.compose.material3.Icon
++import androidx.compose.material3.IconButton
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.OutlinedButton
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.dp
++import com.shadowspark.morontomornica.domain.CatalogDownloadState
++import com.shadowspark.morontomornica.domain.LicensedCatalogTrack
++import com.shadowspark.morontomornica.domain.MornicaUiState
++import com.shadowspark.morontomornica.domain.PlaybackRouter
++import com.shadowspark.morontomornica.ui.MornicaAmberStart
++import com.shadowspark.morontomornica.ui.MornicaCyan
++import com.shadowspark.morontomornica.ui.MornicaEmerald
++import com.shadowspark.morontomornica.ui.MornicaSlateBorder
++import com.shadowspark.morontomornica.ui.MornicaSlateCard
++import com.shadowspark.morontomornica.ui.MornicaTextLight
++import com.shadowspark.morontomornica.ui.MornicaTextMuted
++import com.shadowspark.morontomornica.ui.components.EmptyStateCard
++
++/**
++ * Dedicated offline/downloads shelf. Every action routes through the existing rights-gated
++ * manager: downloads only start after [PlaybackRouter.requestCatalogDownload] passes the gate;
++ * "Play offline" calls [PlaybackRouter.playDownloadedCatalogTrack], which fail-closes when the
++ * Media3 DownloadIndex has no completed bytes.
++ */
++@Composable
++fun DownloadsScreen(
++  uiState: MornicaUiState,
++  router: PlaybackRouter,
++  onBack: () -> Unit,
++) {
++  LazyColumn(
++    modifier = Modifier.fillMaxSize().padding(16.dp),
++    contentPadding = PaddingValues(vertical = 8.dp),
++    verticalArrangement = Arrangement.spacedBy(12.dp),
++  ) {
++    item {
++      Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
++        IconButton(onClick = onBack) {
++          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MornicaEmerald)
++        }
++        Column {
++          Text("Downloads", style = MaterialTheme.typography.titleLarge, color = MornicaTextLight, fontWeight = FontWeight.Bold)
++          Text("Authorized offline tracks · ready offline plays without data", style = MaterialTheme.typography.labelMedium, color = MornicaTextMuted)
++        }
++      }
++    }
++
++    if (uiState.catalogTracks.isEmpty()) {
++      item {
++        EmptyStateCard(
++          title = "No catalogue tracks yet",
++          body = "Licensed downloads appear here after a real catalog backend connects. The demo catalogue proves the offline pipeline only.",
++        )
++      }
++    }
++
++    items(uiState.catalogTracks, key = { it.id }) { track ->
++      DownloadRow(
++        track = track,
++        state = uiState.catalogDownloadStates[track.id] ?: CatalogDownloadState.NONE,
++        onDownload = { router.requestCatalogDownload(track) },
++        onCancel = { router.cancelCatalogDownload(track.id) },
++        onPlayOffline = { router.playDownloadedCatalogTrack(track) },
++      )
++    }
++
++    item {
++      Text(
++        text = "Streaming-only tracks are never downloadable. Offline readiness is gated by real downloaded bytes, not a flag.",
++        style = MaterialTheme.typography.labelSmall,
++        color = MornicaAmberStart,
++        modifier = Modifier.padding(top = 4.dp),
++      )
++    }
++  }
++}
++
++@Composable
++private fun DownloadRow(
++  track: LicensedCatalogTrack,
++  state: CatalogDownloadState,
++  onDownload: () -> Unit,
++  onCancel: () -> Unit,
++  onPlayOffline: () -> Unit,
++) {
++  Card(
++    colors = CardDefaults.cardColors(containerColor = MornicaSlateCard),
++    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
++    border = androidx.compose.foundation.BorderStroke(1.dp, MornicaSlateBorder),
++    modifier = Modifier.fillMaxWidth(),
++  ) {
++    Column(modifier = Modifier.padding(12.dp)) {
++      Text(track.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MornicaTextLight)
++      Text("${track.artist} · ${track.sourceLabel}", style = MaterialTheme.typography.bodySmall, color = MornicaTextMuted)
++      Spacer(Modifier.height(8.dp))
++      Text(
++        text = stateLabel(state),
++        style = MaterialTheme.typography.labelSmall,
++        color = if (state == CatalogDownloadState.COMPLETED) MornicaEmerald else MornicaCyan,
++        fontWeight = FontWeight.SemiBold,
++      )
++      Spacer(Modifier.height(8.dp))
++      Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
++        when (state) {
++          CatalogDownloadState.COMPLETED ->
++            Button(onClick = onPlayOffline, colors = ButtonDefaults.buttonColors(containerColor = MornicaEmerald)) {
++              Text("Play offline", color = androidx.compose.ui.graphics.Color(0xFF04130E), fontWeight = FontWeight.Bold)
++            }
++          CatalogDownloadState.QUEUED,
++          CatalogDownloadState.DOWNLOADING ->
++            OutlinedButton(onClick = onCancel) { Text("Cancel", color = MornicaAmberStart) }
++          CatalogDownloadState.FAILED ->
++            OutlinedButton(onClick = onDownload) { Text("Retry", color = MornicaCyan) }
++          CatalogDownloadState.NONE ->
++            if (track.offlineAllowed) {
++              Button(onClick = onDownload, colors = ButtonDefaults.buttonColors(containerColor = MornicaEmerald)) {
++                Text("Download for offline", color = androidx.compose.ui.graphics.Color(0xFF04130E), fontWeight = FontWeight.Bold)
++              }
++            } else {
++              Text("Streaming only · offline not licensed", style = MaterialTheme.typography.labelSmall, color = MornicaAmberStart)
++            }
++        }
++      }
++    }
++  }
++}
++
++private fun stateLabel(state: CatalogDownloadState): String =
++  when (state) {
++    CatalogDownloadState.NONE -> "Not downloaded"
++    CatalogDownloadState.QUEUED -> "Queued for download"
++    CatalogDownloadState.DOWNLOADING -> "Downloading…"
++    CatalogDownloadState.COMPLETED -> "Ready offline"
++    CatalogDownloadState.FAILED -> "Download failed"
++  }
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/nav/MornicaRoute.kt b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/nav/MornicaRoute.kt
+new file mode 100644
+index 0000000..f7383e4
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/nav/MornicaRoute.kt
+@@ -0,0 +1,33 @@
++package com.shadowspark.morontomornica.ui.nav
++
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.asStateFlow
++
++/**
++ * Lightweight overlay navigation for secondary screens (search, downloads, settings,
++ * playlist detail). The three bottom-tab PrimaryScreens are unchanged; these routes
++ * render as full-screen overlays on top of the active tab so existing navigation and
++ * accessibility tests keep their assumptions.
++ */
++sealed interface MornicaRoute {
++  data object HomeFeed : MornicaRoute
++  data object Search : MornicaRoute
++  data object Downloads : MornicaRoute
++  data object Settings : MornicaRoute
++  data object Playlists : MornicaRoute
++  data class PlaylistDetail(val name: String) : MornicaRoute
++}
++
++object MornicaNav {
++  private val _route = MutableStateFlow<MornicaRoute?>(null)
++  val route: StateFlow<MornicaRoute?> = _route.asStateFlow()
++
++  fun open(route: MornicaRoute) {
++    _route.value = route
++  }
++
++  fun close() {
++    _route.value = null
++  }
++}
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/player/NowPlayingEnhanced.kt b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/player/NowPlayingEnhanced.kt
+new file mode 100644
+index 0000000..3d0ad54
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/player/NowPlayingEnhanced.kt
+@@ -0,0 +1,291 @@
++package com.shadowspark.morontomornica.ui.player
++
++import android.content.Intent
++import androidx.compose.foundation.background
++import androidx.compose.foundation.border
++import androidx.compose.foundation.clickable
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.Spacer
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.size
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.lazy.items
++import androidx.compose.foundation.shape.CircleShape
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.filled.Close
++import androidx.compose.material.icons.filled.Favorite
++import androidx.compose.material.icons.filled.FavoriteBorder
++import androidx.compose.material.icons.filled.KeyboardArrowDown
++import androidx.compose.material.icons.filled.MusicNote
++import androidx.compose.material.icons.filled.Pause
++import androidx.compose.material.icons.filled.PlayArrow
++import androidx.compose.material.icons.filled.Repeat
++import androidx.compose.material.icons.filled.RepeatOne
++import androidx.compose.material.icons.filled.Share
++import androidx.compose.material.icons.filled.Shuffle
++import androidx.compose.material.icons.filled.SkipNext
++import androidx.compose.material.icons.filled.SkipPrevious
++import androidx.compose.material.icons.filled.Timer
++import androidx.compose.material3.AlertDialog
++import androidx.compose.material3.Icon
++import androidx.compose.material3.IconButton
++import androidx.compose.material3.IconToggleButton
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Slider
++import androidx.compose.material3.Surface
++import androidx.compose.material3.Text
++import androidx.compose.material3.TextButton
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.setValue
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.clip
++import androidx.compose.ui.graphics.Brush
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.platform.LocalContext
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.dp
++import com.shadowspark.morontomornica.core.state.SleepTimerController
++import com.shadowspark.morontomornica.domain.MornicaUiState
++import com.shadowspark.morontomornica.domain.PlaybackRouter
++import com.shadowspark.morontomornica.model.RepeatMode
++import com.shadowspark.morontomornica.ui.MornicaAmberGradient
++import com.shadowspark.morontomornica.ui.MornicaCyan
++import com.shadowspark.morontomornica.ui.MornicaDangerRed
++import com.shadowspark.morontomornica.ui.MornicaEmerald
++import com.shadowspark.morontomornica.ui.MornicaEmeraldDark
++import com.shadowspark.morontomornica.ui.MornicaMidnightBg
++import com.shadowspark.morontomornica.ui.MornicaSlateBorder
++import com.shadowspark.morontomornica.ui.MornicaSlateCard
++import com.shadowspark.morontomornica.ui.MornicaSlateCardElevated
++import com.shadowspark.morontomornica.ui.MornicaSlateHeader
++import com.shadowspark.morontomornica.ui.MornicaTextLight
++import com.shadowspark.morontomornica.ui.MornicaTextMuted
++import com.shadowspark.morontomornica.ui.MornicaTokens
++import com.shadowspark.morontomornica.ui.components.TrackRowCompact
++
++/**
++ * Enhanced Now Playing sheet: artwork slot, transport, sleep timer, share, and the
++ * active queue with remove. Playback always flows through [router]; [sleepTimer] only
++ * requests a pause through [PlaybackRouter.toggleLocalPlayPause] — it never controls a player.
++ *
++ * [onRemoveFromQueue] is supplied by the Phase-C router patch (see patches/existing-file-patches.md);
++ * until that patch lands, pass a no-op lambda and keep the remove action hidden behind that gate.
++ */
++@Composable
++fun NowPlayingEnhancedSheet(
++  uiState: MornicaUiState,
++  router: PlaybackRouter,
++  sleepTimer: SleepTimerController,
++  onRemoveFromQueue: (String) -> Unit,
++  onCollapse: () -> Unit,
++) {
++  val active = uiState.activeLocalTrack ?: return
++  val context = LocalContext.current
++  var showTimer by remember { mutableStateOf(false) }
++
++  val maxDuration = uiState.localDurationMs.coerceAtLeast(1_000L)
++  val position = uiState.localPositionMs.coerceIn(0L, maxDuration)
++  val queueTracks =
++    uiState.queueTrackIds.mapNotNull { id -> uiState.localTracks.firstOrNull { it.id == id } }
++
++  Surface(modifier = Modifier.fillMaxSize(), color = MornicaMidnightBg) {
++    LazyColumn(
++      modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
++      verticalArrangement = Arrangement.spacedBy(14.dp),
++    ) {
++      item {
++        Row(
++          modifier = Modifier.fillMaxWidth(),
++          horizontalArrangement = Arrangement.SpaceBetween,
++          verticalAlignment = Alignment.CenterVertically,
++        ) {
++          IconButton(onClick = onCollapse) {
++            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Collapse player", tint = MornicaTextLight)
++          }
++          Text("NOW PLAYING OFFLINE", style = MaterialTheme.typography.labelSmall, color = MornicaEmerald, fontWeight = FontWeight.Bold)
++          IconToggleButton(checked = uiState.favoriteTrackIds.contains(active.id), onCheckedChange = { router.toggleFavorite(active.id) }) {
++            Icon(
++              if (uiState.favoriteTrackIds.contains(active.id)) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
++              contentDescription = "Favorite track",
++              tint = if (uiState.favoriteTrackIds.contains(active.id)) MornicaDangerRed else MornicaTextMuted,
++            )
++          }
++        }
++      }
++
++      item {
++        Box(
++          modifier =
++            Modifier
++              .fillMaxWidth()
++              .height(230.dp)
++              .clip(RoundedCornerShape(MornicaTokens.NowPlayingArtworkRadius))
++              .background(
++                Brush.linearGradient(listOf(MornicaSlateCardElevated, MornicaEmeraldDark, MornicaSlateCard)),
++              )
++              .border(1.dp, MornicaSlateBorder, RoundedCornerShape(MornicaTokens.NowPlayingArtworkRadius)),
++          contentAlignment = Alignment.Center,
++        ) {
++          Box(
++            modifier = Modifier.size(88.dp).clip(CircleShape).background(MornicaSlateHeader).border(2.dp, MornicaEmerald, CircleShape),
++            contentAlignment = Alignment.Center,
++          ) {
++            Icon(Icons.Default.MusicNote, contentDescription = null, tint = MornicaEmerald, modifier = Modifier.size(44.dp))
++          }
++        }
++      }
++
++      item {
++        Column {
++          Text(active.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = MornicaTextLight)
++          Text("${active.artist} • ${active.album}", style = MaterialTheme.typography.bodyMedium, color = MornicaCyan, fontWeight = FontWeight.SemiBold)
++          uiState.playbackError?.let { err ->
++            Spacer(Modifier.height(6.dp))
++            Text("Playback error: $err", style = MaterialTheme.typography.labelSmall, color = MornicaDangerRed)
++          }
++        }
++      }
++
++      item {
++        Column {
++          Slider(
++            value = position.toFloat(),
++            onValueChange = { router.seekLocalTo(it.toLong()) },
++            valueRange = 0f..maxDuration.toFloat(),
++          )
++          Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
++            Text(formatMs(position), style = MaterialTheme.typography.labelMedium, color = MornicaTextMuted)
++            Text(formatMs(maxDuration), style = MaterialTheme.typography.labelMedium, color = MornicaTextMuted)
++          }
++        }
++      }
++
++      item {
++        Row(
++          modifier = Modifier.fillMaxWidth(),
++          horizontalArrangement = Arrangement.SpaceEvenly,
++          verticalAlignment = Alignment.CenterVertically,
++        ) {
++          IconToggleButton(checked = uiState.shuffleEnabled, onCheckedChange = { router.toggleShuffle() }) {
++            Icon(Icons.Default.Shuffle, contentDescription = "Toggle shuffle", tint = if (uiState.shuffleEnabled) MornicaEmerald else MornicaTextMuted)
++          }
++          IconButton(onClick = { router.skipPrevious() }) {
++            Icon(Icons.Default.SkipPrevious, contentDescription = "Previous", tint = MornicaTextLight)
++          }
++          Box(
++            modifier = Modifier.size(68.dp).clip(CircleShape).background(MornicaAmberGradient).clickable { router.toggleLocalPlayPause() },
++            contentAlignment = Alignment.Center,
++          ) {
++            Icon(
++              if (uiState.isLocalPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
++              contentDescription = if (uiState.isLocalPlaying) "Pause" else "Play",
++              tint = Color(0xFF0B101B),
++              modifier = Modifier.size(34.dp),
++            )
++          }
++          IconButton(onClick = { router.skipNext() }) {
++            Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = MornicaTextLight)
++          }
++          IconButton(onClick = { router.cycleRepeatMode() }) {
++            Icon(
++              if (uiState.repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
++              contentDescription = "Repeat mode: ${uiState.repeatMode.name}",
++              tint = if (uiState.repeatMode != RepeatMode.OFF) MornicaEmerald else MornicaTextMuted,
++            )
++          }
++        }
++      }
++
++      item {
++        Row(
++          modifier = Modifier.fillMaxWidth(),
++          horizontalArrangement = Arrangement.SpaceBetween,
++          verticalAlignment = Alignment.CenterVertically,
++        ) {
++          TextButton(onClick = { showTimer = true }) {
++            Icon(Icons.Default.Timer, contentDescription = null, tint = MornicaCyan)
++            Text(
++              if (sleepTimer.active) "Sleep timer ${sleepTimer.remainingMinutes}m" else "Sleep timer",
++              color = MornicaCyan,
++              modifier = Modifier.padding(start = 6.dp),
++            )
++          }
++          TextButton(onClick = {
++            val share =
++              Intent(Intent.ACTION_SEND).apply {
++                type = "text/plain"
++                putExtra(Intent.EXTRA_TEXT, "${active.title} · ${active.artist} — playing in Mornica")
++              }
++            context.startActivity(Intent.createChooser(share, "Share track"))
++          }) {
++            Icon(Icons.Default.Share, contentDescription = null, tint = MornicaCyan)
++            Text("Share", color = MornicaCyan, modifier = Modifier.padding(start = 6.dp))
++          }
++        }
++      }
++
++      item {
++        Text(
++          "QUEUE · ${queueTracks.size}",
++          style = MaterialTheme.typography.labelMedium,
++          color = MornicaCyan,
++          fontWeight = FontWeight.Bold,
++        )
++      }
++
++      items(queueTracks, key = { it.id }) { q ->
++        TrackRowCompact(
++          track = q,
++          subtitle = q.artist,
++          onClick = { router.playLocalTrack(q) },
++          trailing = {
++            IconButton(onClick = { onRemoveFromQueue(q.id) }) {
++              Icon(Icons.Default.Close, contentDescription = "Remove from queue", tint = MornicaTextMuted)
++            }
++          },
++        )
++      }
++    }
++  }
++
++  if (showTimer) {
++    AlertDialog(
++      onDismissRequest = { showTimer = false },
++      title = { Text("Sleep timer") },
++      text = {
++        Column {
++          listOf(15, 30, 45, 60).forEach { minutes ->
++            TextButton(onClick = {
++              // The pause callback was supplied when SleepTimerController was constructed
++              // (MornicaApp patch 5); the dialog only chooses the duration and starts it.
++              sleepTimer.start(minutes)
++              showTimer = false
++            }) {
++              Text("$minutes minutes")
++            }
++          }
++          if (sleepTimer.active) {
++            TextButton(onClick = { sleepTimer.cancel() }) { Text("Cancel timer") }
++          }
++        }
++      },
++      confirmButton = { TextButton(onClick = { showTimer = false }) { Text("Close") } },
++    )
++  }
++}
++
++private fun formatMs(ms: Long): String {
++  val totalSeconds = (ms.coerceAtLeast(0L) / 1_000L).toInt()
++  return "%d:%02d".format(totalSeconds / 60, totalSeconds % 60)
++}
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/playlist/PlaylistDetailScreen.kt b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/playlist/PlaylistDetailScreen.kt
+new file mode 100644
+index 0000000..79c6775
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/playlist/PlaylistDetailScreen.kt
+@@ -0,0 +1,178 @@
++package com.shadowspark.morontomornica.ui.playlist
++
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.PaddingValues
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.lazy.itemsIndexed
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.automirrored.filled.ArrowBack
++import androidx.compose.material.icons.filled.Add
++import androidx.compose.material.icons.filled.ArrowDownward
++import androidx.compose.material.icons.filled.ArrowUpward
++import androidx.compose.material.icons.filled.Close
++import androidx.compose.material.icons.filled.Delete
++import androidx.compose.material.icons.filled.Edit
++import androidx.compose.material.icons.filled.PlayArrow
++import androidx.compose.material3.AlertDialog
++import androidx.compose.material3.Icon
++import androidx.compose.material3.IconButton
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.OutlinedButton
++import androidx.compose.material3.OutlinedTextField
++import androidx.compose.material3.Text
++import androidx.compose.material3.TextButton
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableIntStateOf
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.setValue
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.dp
++import com.shadowspark.morontomornica.data.local.PlaylistStore
++import com.shadowspark.morontomornica.domain.MornicaUiState
++import com.shadowspark.morontomornica.domain.PlaybackRouter
++import com.shadowspark.morontomornica.ui.MornicaEmerald
++import com.shadowspark.morontomornica.ui.MornicaTextLight
++import com.shadowspark.morontomornica.ui.MornicaTextMuted
++import com.shadowspark.morontomornica.ui.components.TrackRowCompact
++
++/**
++ * Playlist detail backed by [PlaylistStore]: play, add the current track, rename, delete,
++ * remove tracks, and reorder up/down. Mutations bump [version] so the snapshot recomposes;
++ * when Room replaces the store, observe its Flow instead of this counter.
++ */
++@Composable
++fun PlaylistDetailScreen(
++  name: String,
++  store: PlaylistStore,
++  uiState: MornicaUiState,
++  router: PlaybackRouter,
++  onBack: () -> Unit,
++) {
++  var version by remember { mutableIntStateOf(0) }
++  val ids = remember(version, name) { store.tracks(name) }
++  val tracks = remember(version, ids, uiState.localTracks) {
++    uiState.localTracks.filter { it.id in ids }
++  }
++  var showRename by remember { mutableStateOf(false) }
++  var confirmDelete by remember { mutableStateOf(false) }
++  var renameValue by remember(name) { mutableStateOf(name) }
++
++  Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
++    Row(verticalAlignment = Alignment.CenterVertically) {
++      IconButton(onClick = onBack) {
++        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MornicaEmerald)
++      }
++      Column(modifier = Modifier.weight(1f)) {
++        Text(name, style = MaterialTheme.typography.titleLarge, color = MornicaTextLight, fontWeight = FontWeight.Bold)
++        Text("${tracks.size} tracks", style = MaterialTheme.typography.labelMedium, color = MornicaTextMuted)
++      }
++      IconButton(onClick = { showRename = true }) {
++        Icon(Icons.Default.Edit, contentDescription = "Rename playlist", tint = MornicaTextMuted)
++      }
++      IconButton(onClick = { confirmDelete = true }) {
++        Icon(Icons.Default.Delete, contentDescription = "Delete playlist", tint = MornicaTextMuted)
++      }
++      IconButton(onClick = { tracks.firstOrNull()?.let { router.playLocalTrack(it) } }) {
++        Icon(Icons.Default.PlayArrow, contentDescription = "Play playlist", tint = MornicaEmerald)
++      }
++    }
++
++    val active = uiState.activeLocalTrack
++    if (active != null && active.id !in ids) {
++      OutlinedButton(onClick = {
++        store.add(name, active.id)
++        version++
++      }) {
++        Icon(Icons.Default.Add, contentDescription = null, tint = MornicaEmerald)
++        Text("Add current track", color = MornicaEmerald, modifier = Modifier.padding(start = 6.dp))
++      }
++    }
++
++    LazyColumn(contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
++      itemsIndexed(tracks, key = { _, track -> track.id }) { index, track ->
++        TrackRowCompact(
++          track = track,
++          subtitle = track.artist,
++          onClick = { router.playLocalTrack(track) },
++          trailing = {
++            IconButton(onClick = {
++              if (index > 0) {
++                store.move(name, index, index - 1)
++                version++
++              }
++            }) {
++              Icon(Icons.Default.ArrowUpward, contentDescription = "Move up", tint = MornicaTextMuted)
++            }
++            IconButton(onClick = {
++              if (index < tracks.lastIndex) {
++                store.move(name, index, index + 1)
++                version++
++              }
++            }) {
++              Icon(Icons.Default.ArrowDownward, contentDescription = "Move down", tint = MornicaTextMuted)
++            }
++            IconButton(onClick = {
++              store.removeTrack(name, track.id)
++              version++
++            }) {
++              Icon(Icons.Default.Close, contentDescription = "Remove from playlist", tint = MornicaTextMuted)
++            }
++          },
++        )
++      }
++    }
++  }
++
++  if (showRename) {
++    AlertDialog(
++      onDismissRequest = { showRename = false },
++      title = { Text("Rename playlist") },
++      text = {
++        OutlinedTextField(
++          value = renameValue,
++          onValueChange = { renameValue = it },
++          singleLine = true,
++          placeholder = { Text("Playlist name") },
++        )
++      },
++      confirmButton = {
++        TextButton(onClick = {
++          val newName = renameValue.trim()
++          if (newName.isNotBlank() && store.rename(name, newName)) {
++            showRename = false
++            onBack()
++          }
++        }) { Text("Rename") }
++      },
++      dismissButton = {
++        TextButton(onClick = { showRename = false }) { Text("Cancel") }
++      },
++    )
++  }
++
++  if (confirmDelete) {
++    AlertDialog(
++      onDismissRequest = { confirmDelete = false },
++      title = { Text("Delete playlist?") },
++      text = { Text("\"$name\" and its track order are removed from this device. Tracks in your library are not deleted.") },
++      confirmButton = {
++        TextButton(onClick = {
++          store.delete(name)
++          confirmDelete = false
++          onBack()
++        }) { Text("Delete") }
++      },
++      dismissButton = {
++        TextButton(onClick = { confirmDelete = false }) { Text("Cancel") }
++      },
++    )
++  }
++}
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/playlist/PlaylistListScreen.kt b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/playlist/PlaylistListScreen.kt
+new file mode 100644
+index 0000000..c115ce1
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/playlist/PlaylistListScreen.kt
+@@ -0,0 +1,139 @@
++package com.shadowspark.morontomornica.ui.playlist
++
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.PaddingValues
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.Spacer
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.lazy.items
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.automirrored.filled.ArrowBack
++import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
++import androidx.compose.material.icons.filled.Add
++import androidx.compose.material3.AlertDialog
++import androidx.compose.material3.Icon
++import androidx.compose.material3.IconButton
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.OutlinedButton
++import androidx.compose.material3.OutlinedTextField
++import androidx.compose.material3.Text
++import androidx.compose.material3.TextButton
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableIntStateOf
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.setValue
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.dp
++import com.shadowspark.morontomornica.data.local.PlaylistStore
++import com.shadowspark.morontomornica.ui.MornicaCyan
++import com.shadowspark.morontomornica.ui.MornicaEmerald
++import com.shadowspark.morontomornica.ui.MornicaTextLight
++import com.shadowspark.morontomornica.ui.MornicaTextMuted
++import com.shadowspark.morontomornica.ui.components.EmptyStateCard
++
++/**
++ * Playlist index over [PlaylistStore]. Create here, open a playlist for reorder/remove.
++ * No network; names and track IDs persist through the store's JSON implementation.
++ */
++@Composable
++fun PlaylistListScreen(
++  store: PlaylistStore,
++  onOpenPlaylist: (String) -> Unit,
++  onBack: () -> Unit,
++) {
++  var version by remember { mutableIntStateOf(0) }
++  val names = remember(version) { store.names() }
++  var showCreate by remember { mutableStateOf(false) }
++  var newName by remember { mutableStateOf("") }
++
++  LazyColumn(
++    modifier = Modifier.fillMaxSize().padding(16.dp),
++    contentPadding = PaddingValues(vertical = 8.dp),
++    verticalArrangement = Arrangement.spacedBy(8.dp),
++  ) {
++    item {
++      Row(verticalAlignment = Alignment.CenterVertically) {
++        IconButton(onClick = onBack) {
++          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MornicaEmerald)
++        }
++        Column(modifier = Modifier.weight(1f)) {
++          Text("Playlists", style = MaterialTheme.typography.titleLarge, color = MornicaTextLight, fontWeight = FontWeight.Bold)
++          Text("Created and kept on this device", style = MaterialTheme.typography.labelMedium, color = MornicaTextMuted)
++        }
++        OutlinedButton(onClick = { showCreate = true }) {
++          Icon(Icons.Default.Add, contentDescription = null, tint = MornicaEmerald)
++          Text("New", color = MornicaEmerald, modifier = Modifier.padding(start = 6.dp))
++        }
++      }
++    }
++
++    if (names.isEmpty()) {
++      item {
++        EmptyStateCard(
++          title = "No playlists yet",
++          body = "Create a playlist, then add tracks from the Now Playing screen. Playlists stay on this device.",
++          actionLabel = "New playlist",
++          onAction = { showCreate = true },
++        )
++      }
++    }
++
++    items(names, key = { it }) { name ->
++      val count = store.tracks(name).size
++      Row(
++        modifier =
++          Modifier
++            .fillMaxWidth()
++            .padding(vertical = 4.dp),
++        verticalAlignment = Alignment.CenterVertically,
++      ) {
++        Column(modifier = Modifier.weight(1f)) {
++          Text(name, style = MaterialTheme.typography.titleSmall, color = MornicaTextLight, fontWeight = FontWeight.Bold)
++          Text("$count tracks", style = MaterialTheme.typography.bodySmall, color = MornicaTextMuted)
++        }
++        IconButton(onClick = { onOpenPlaylist(name) }) {
++          Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Open playlist", tint = MornicaCyan)
++        }
++      }
++    }
++
++    item { Spacer(Modifier.height(72.dp)) }
++  }
++
++  if (showCreate) {
++    AlertDialog(
++      onDismissRequest = { showCreate = false },
++      title = { Text("New playlist") },
++      text = {
++        OutlinedTextField(
++          value = newName,
++          onValueChange = { newName = it },
++          singleLine = true,
++          placeholder = { Text("Playlist name") },
++        )
++      },
++      confirmButton = {
++        TextButton(onClick = {
++          if (store.create(newName.trim())) {
++            val created = newName.trim()
++            newName = ""
++            showCreate = false
++            onOpenPlaylist(created)
++          }
++        }) { Text("Create") }
++      },
++      dismissButton = {
++        TextButton(onClick = { showCreate = false }) { Text("Cancel") }
++      },
++    )
++  }
++}
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/search/SearchScreen.kt b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/search/SearchScreen.kt
+new file mode 100644
+index 0000000..a520d7f
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/search/SearchScreen.kt
+@@ -0,0 +1,123 @@
++package com.shadowspark.morontomornica.ui.search
++
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.PaddingValues
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.lazy.items
++import androidx.compose.foundation.horizontalScroll
++import androidx.compose.foundation.rememberScrollState
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.automirrored.filled.ArrowBack
++import androidx.compose.material.icons.filled.Search
++import androidx.compose.material3.ExperimentalMaterial3Api
++import androidx.compose.material3.Icon
++import androidx.compose.material3.IconButton
++import androidx.compose.material3.OutlinedTextField
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.setValue
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.unit.dp
++import com.shadowspark.morontomornica.domain.MornicaUiState
++import com.shadowspark.morontomornica.domain.PlaybackRouter
++import com.shadowspark.morontomornica.model.LocalMediaTrack
++import com.shadowspark.morontomornica.ui.MornicaEmerald
++import com.shadowspark.morontomornica.ui.MornicaTextMuted
++import com.shadowspark.morontomornica.ui.components.EmptyStateCard
++import com.shadowspark.morontomornica.ui.components.GenreChip
++import com.shadowspark.morontomornica.ui.components.TrackRowCompact
++
++/**
++ * Local library search over title/artist/album. Results are filtered on-device;
++ * the query is also mirrored to the router so the library tab stays consistent.
++ */
++@OptIn(ExperimentalMaterial3Api::class)
++@Composable
++fun SearchScreen(
++  uiState: MornicaUiState,
++  router: PlaybackRouter,
++  onBack: () -> Unit,
++) {
++  var text by remember { mutableStateOf(uiState.localSearchQuery) }
++
++  val results =
++    remember(text, uiState.localTracks) {
++      val q = text.trim().lowercase()
++      if (q.isEmpty()) {
++        uiState.localTracks.filter { it.isPlayableOffline() }
++      } else {
++        uiState.localTracks.filter {
++          it.isPlayableOffline() &&
++            (it.title.lowercase().contains(q) ||
++              it.artist.lowercase().contains(q) ||
++              it.album.lowercase().contains(q))
++        }
++      }
++    }
++
++  val artistChips =
++    remember(uiState.localTracks) {
++      uiState.localTracks.filter { it.isPlayableOffline() }
++        .groupBy { it.artist }
++        .entries.sortedByDescending { it.value.size }
++        .take(6)
++        .map { it.key }
++    }
++
++  Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
++    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
++      IconButton(onClick = onBack) {
++        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MornicaEmerald)
++      }
++      OutlinedTextField(
++        value = text,
++        onValueChange = {
++          text = it
++          router.updateLocalSearchQuery(it)
++        },
++        modifier = Modifier.fillMaxWidth(),
++        placeholder = { Text("Search songs, artists, albums") },
++        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MornicaTextMuted) },
++        singleLine = true,
++      )
++    }
++
++    Row(
++      modifier = Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 8.dp),
++      horizontalArrangement = Arrangement.spacedBy(8.dp),
++    ) {
++      artistChips.forEach { artist ->
++        GenreChip(label = artist, selected = text.equals(artist, ignoreCase = true), onClick = { text = artist })
++      }
++    }
++
++    LazyColumn(
++      contentPadding = PaddingValues(vertical = 8.dp),
++      verticalArrangement = Arrangement.spacedBy(4.dp),
++    ) {
++      if (results.isEmpty()) {
++        item {
++          EmptyStateCard(
++            title = "Nothing found",
++            body = "Try a song title or artist name. Only playable on-device tracks are searched here.",
++          )
++        }
++      }
++      items(results, key = LocalMediaTrack::id) { track ->
++        TrackRowCompact(
++          track = track,
++          subtitle = "${track.artist} · ${track.album}",
++          onClick = { router.playLocalTrack(track) },
++        )
++      }
++    }
++  }
++}
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/settings/SettingsScreen.kt b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/settings/SettingsScreen.kt
+new file mode 100644
+index 0000000..b67ae59
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/assets/templates/ui/settings/SettingsScreen.kt
+@@ -0,0 +1,131 @@
++package com.shadowspark.morontomornica.ui.settings
++
++import android.content.Intent
++import android.net.Uri
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.Spacer
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.automirrored.filled.ArrowBack
++import androidx.compose.material.icons.filled.PrivacyTip
++import androidx.compose.material3.Card
++import androidx.compose.material3.CardDefaults
++import androidx.compose.material3.Icon
++import androidx.compose.material3.IconButton
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.OutlinedButton
++import androidx.compose.material3.Switch
++import androidx.compose.material3.SwitchDefaults
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.platform.LocalContext
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.dp
++import com.shadowspark.morontomornica.domain.MornicaUiState
++import com.shadowspark.morontomornica.domain.PlaybackRouter
++import com.shadowspark.morontomornica.model.PUBLIC_PRIVACY_POLICY_URL
++import com.shadowspark.morontomornica.ui.MornicaCyan
++import com.shadowspark.morontomornica.ui.MornicaEmerald
++import com.shadowspark.morontomornica.ui.MornicaSlateBorder
++import com.shadowspark.morontomornica.ui.MornicaSlateCard
++import com.shadowspark.morontomornica.ui.MornicaTextLight
++import com.shadowspark.morontomornica.ui.MornicaTextMuted
++
++/**
++ * Settings surface. The only functional toggle (Wi-Fi-only downloads) delegates to the router;
++ * other rows are informational and open the system browser for the public policy URL.
++ */
++@Composable
++fun SettingsScreen(
++  uiState: MornicaUiState,
++  router: PlaybackRouter,
++  onBack: () -> Unit,
++) {
++  val context = LocalContext.current
++
++  LazyColumn(
++    modifier = Modifier.fillMaxSize().padding(16.dp),
++    verticalArrangement = Arrangement.spacedBy(12.dp),
++  ) {
++    item {
++      Row(verticalAlignment = Alignment.CenterVertically) {
++        IconButton(onClick = onBack) {
++          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MornicaEmerald)
++        }
++        Text("Settings", style = MaterialTheme.typography.titleLarge, color = MornicaTextLight, fontWeight = FontWeight.Bold)
++      }
++    }
++
++    item {
++      Card(
++        colors = CardDefaults.cardColors(containerColor = MornicaSlateCard),
++        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
++        border = androidx.compose.foundation.BorderStroke(1.dp, MornicaSlateBorder),
++      ) {
++        Row(
++          modifier = Modifier.fillMaxWidth().padding(16.dp),
++          horizontalArrangement = Arrangement.SpaceBetween,
++          verticalAlignment = Alignment.CenterVertically,
++        ) {
++          Column(modifier = Modifier.weight(1f)) {
++            Text("Download on Wi-Fi only", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MornicaTextLight)
++            Text("Prevents mobile-data downloads of authorized tracks", style = MaterialTheme.typography.bodySmall, color = MornicaTextMuted)
++          }
++          Switch(
++            checked = uiState.preferWifiOnlyDownloads,
++            onCheckedChange = { router.setWifiOnlyDownloads(it) },
++            colors = SwitchDefaults.colors(checkedTrackColor = MornicaEmerald),
++          )
++        }
++      }
++    }
++
++    item {
++      Card(
++        colors = CardDefaults.cardColors(containerColor = MornicaSlateCard),
++        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
++        border = androidx.compose.foundation.BorderStroke(1.dp, MornicaSlateBorder),
++      ) {
++        Column(modifier = Modifier.padding(16.dp)) {
++          Text("Privacy & rights", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MornicaTextLight)
++          Spacer(Modifier.height(4.dp))
++          Text(
++            "Your music library stays on-device. No advertising or analytics SDKs. YouTube links open externally and are never downloaded.",
++            style = MaterialTheme.typography.bodySmall,
++            color = MornicaTextMuted,
++          )
++          Spacer(Modifier.height(10.dp))
++          OutlinedButton(onClick = {
++            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PUBLIC_PRIVACY_POLICY_URL)))
++          }) {
++            Icon(Icons.Default.PrivacyTip, contentDescription = null, tint = MornicaCyan)
++            Text("Public privacy policy", color = MornicaCyan, modifier = Modifier.padding(start = 6.dp))
++          }
++        }
++      }
++    }
++
++    item {
++      Card(
++        colors = CardDefaults.cardColors(containerColor = MornicaSlateCard),
++        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
++        border = androidx.compose.foundation.BorderStroke(1.dp, MornicaSlateBorder),
++      ) {
++        Column(modifier = Modifier.padding(16.dp)) {
++          Text("About Mornica", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MornicaTextLight)
++          Spacer(Modifier.height(4.dp))
++          Text("Music for real people · African music at the center.", style = MaterialTheme.typography.bodySmall, color = MornicaTextMuted)
++          Text("Built by ShadowSpark Technologies. Demo catalogue tracks are labeled DEMO and use sample audio; licensed tracks require a proven rights agreement.", style = MaterialTheme.typography.bodySmall, color = MornicaTextMuted)
++        }
++      }
++    }
++  }
++}
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/references/data-source-contract.md b/.agents/skills/mornica-spotify-grade-upgrade/references/data-source-contract.md
+new file mode 100644
+index 0000000..fe38323
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/references/data-source-contract.md
+@@ -0,0 +1,50 @@
++# Specialized catalog data-source contract (Mornica licensed catalogue)
++
++Purpose: define the production data source that replaces demo fixtures without weakening the default-deny rights gate. Implements the existing `CatalogSource` seam in `domain/LicensedCatalogRepository.kt`; it does not replace it.
++
++## Existing seam (do not redesign)
++
++```kotlin
++interface CatalogSource {
++  val label: String
++  val isDemo: Boolean
++  fun tracks(): List<LicensedCatalogTrack>
++  fun byId(id: String): LicensedCatalogTrack?
++}
++```
++
++`LicensedCatalogBackendSource` currently returns `emptyList()` (fail-closed). The backend implementation fills it once real agreements exist; `LicensedCatalogRights.evaluate(...)` stays in front of every playback/download decision.
++
++## Source requirements (specialized for Mornica)
++
++1. **Metadata store**: Firestore (or equivalent document store), region `africa-south1` (Johannesburg) for lowest Nigeria latency; collections:
++   - `tracks/{trackId}`: `title, artist, album, genre, releaseYear, durationMs, artworkUrl, licenseReference, sourceLabel, allowedTerritories[], streamAllowed, offlineAllowed, rightsConfirmed, assetRef, version`
++   - `artists/{artistId}`: `name, city, genre, bio, provenanceBadge, rightsConfirmed, youtubeChannelUrl?`
++   - `playlists/{curatedId}`: `title, kind (shelf/editorial), trackIds[], territory`
++2. **Binary audio store**: Cloud Storage bucket or signed-CDN origin; access only via short-lived signed URLs (TTL ≤ 6 h) issued by an owner-controlled endpoint. No public read objects. URLs must match an allowlisted exact host enforced by `LicensedCatalogRights.isTrustedHttpsMediaUrl`; allowlist changes require a code change + review (hosts are not self-asserted by tracks).
++3. **Rights record invariants** (mirror `LicensedCatalogTrack`):
++   - `rightsConfirmed = true` ONLY when an authenticated agreement record exists; demo fixtures keep `DEMO-*` references and `isDemo = true`.
++   - `licenseExpiresAtEpochMs` enforced by `evaluate(..., CatalogAccess.STREAM / SAVE_OFFLINE / PLAY_DOWNLOADED)`.
++   - Territory `NG` default; `GH` allowed where agreement covers; unknown territory → deny.
++4. **Client pipeline**:
++   - Fetch metadata over HTTPS/TLS only; cache locally with bounded size + TTL ≤ 24 h (consistent with ADR-001 YouTube cache discipline); offline reads serve cache; missing network never claims rights it does not have.
++   - Downloads remain Media3 `DownloadManager` + `OfflineReadinessVerifier`; "Ready offline" requires completed bytes in `DownloadIndex`, never a metadata flag.
++   - No analytics/ad SDK in the MVP data path; no user-library upload.
++5. **Security & policy**:
++   - No YouTube/`googlevideo.com` assets in the catalog; those hosts never enter `trustedMediaHosts`.
++   - Signed URL rotation on compromise; client stores no long-lived credentials; API key (if any) server-side only.
++6. **Offline-first degradation**: backend unreachable → existing demo catalog labeled DEMO remains playable; UI shows "Licensed catalogue offline — showing demos"; no fabricated `LICENSED` badges.
++
++## Acceptance tests for the future backend source
++
++- `LicensedCatalogBackendSource` returns zero tracks when no valid agreement (fail-closed test).
++- Every returned track passes `LicensedCatalogRights.evaluate(track, STREAM, "NG")`; a tampered record (blank `licenseReference`, non-allowlisted host, expired license) evaluates to deny with the expected `CatalogDenial`.
++- Signed URL expiry honored; a cached track whose license expired denies `PLAY_DOWNLOADED` until re-verified.
++- Demo and licensed sets never mix labels in one track record.
++
++## Integration order (owner-approved roadmap)
++
++1. Contract review + rights policy (legal agreement templates for independent artists via Creator Hub form).
++2. Backend minimal: one track, one artist, signed URL, gate tests green.
++3. Editorials/shelves feeding `HomeFeedScreen` Phase B templates.
++4. Offline download rights per track; eviction policy for cache.
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/references/feature-matrix.md b/.agents/skills/mornica-spotify-grade-upgrade/references/feature-matrix.md
+new file mode 100644
+index 0000000..0d6380f
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/references/feature-matrix.md
+@@ -0,0 +1,27 @@
++# Feature matrix — Spotify-grade target vs Mornica today
++
++Information architecture and interaction parity. Brand assets, visuals, and proprietary Spotify code are never copied; Mornica keeps its own palette (`ui/MornicaTheme.kt`).
++
++| # | Spotify-equivalent capability | Mornica today (main `aa5d78d`) | Target in this skill | Template | Phase | Gate |
++|---|---|---|---|---|---|---|
++| 1 | Home feed with personalized shelves (Recent, Liked, Made-for-you, Artists) | None; `My Music` list-only | `HomeFeedScreen` + `OnDeviceRecommender` shelves | `ui/home/HomeFeedScreen.kt`, `core/reco/OnDeviceRecommender.kt`, `ui/home/HomeFeedModel.kt` | A→B | unit + lint + assemble |
++| 2 | Full search (track/artist/album) with chips | Local filter box in library only | `SearchScreen` with chips + results grouped | `ui/search/SearchScreen.kt` | B | unit + assemble |
++| 3 | Playlists: create, rename, delete, add/remove, reorder | `addToPlaylist(name, id)` in-memory map; no rename/delete/reorder | `PlaylistStore` seam + list/create + detail with rename/delete/reorder | `data/local/PlaylistRepository.kt`, `ui/playlist/PlaylistListScreen.kt`, `ui/playlist/PlaylistDetailScreen.kt` | A→C | unit tests |
++| 4 | Downloads / Offline shelf with state per track | `CatalogDownloadManager` + states in `MornicaUiState.catalogDownloadStates`; no dedicated screen | `DownloadsScreen` (queued/downloading/completed/failed, remove offline copy) | `ui/library/DownloadsScreen.kt` | B | unit + assemble |
++| 5 | Now Playing: large artwork zone, queue list, like, share, sleep timer, transport | `NowPlayingFullSheet` with slider + shuffle/repeat/transport; no queue list, no timer, no share | `NowPlayingEnhanced.kt`: queue section, sleep timer, share intent, artwork slot (local MediaStore art optional) | `ui/player/NowPlayingEnhanced.kt`, `core/state/SleepTimerController.kt` | C | instrumented playback + unit |
++| 6 | Queue management: view list, remove, jump-to, reorder | `queueTrackIds` list; skip next/previous; no UI list | Queue section in enhanced player; remove/jump helpers on router state | `ui/player/NowPlayingEnhanced.kt` | C | unit |
++| 7 | Settings (offline/wifi-only, theme, about, privacy, storage) | Wi-Fi toggle inside catalog card; no settings screen | `SettingsScreen` wired to existing `setWifiOnlyDownloads` + privacy URL | `ui/settings/SettingsScreen.kt` | B | assemble |
++| 8 | Recommendations / discovery from listening history | None; static demo catalog | On-device heuristics: recent, favorites, top artists, top tracks; zero network | `core/reco/OnDeviceRecommender.kt` | A | pure-JUnit tests |
++| 9 | Persistent library state across restarts | Favorites/playlists in-memory; downloads in JSON `DownloadStore` | `PlaylistStore` JSON persistence (Room migration path documented) | `data/local/PlaylistRepository.kt` | A→D | unit + device relaunch |
++| 10 | Per-track metadata + album art | Title/artist/album/folder/duration; no art slot | Artwork slot composable; optional MediaStore art loader (Phase D, no new permission) | `ui/components/ShelfComponents.kt`, config snippet for Coil (optional) | D | assemble |
++| 11 | Catalog data source (real licensed backend) | Demo fixtures only; `CatalogSource` seam exists, `LicensedCatalogBackendSource` empty/fail-closed | Backend contract: Firestore metadata + signed CDN URLs; gate unchanged | `references/data-source-contract.md` | D (owner-approved backend project) | rights-gate tests |
++| 12 | Notification / lock-screen transport | Media3 `MediaSessionService` active; demo recorded | Keep; Phase C verifies queue metadata on session | existing `LocalAudioPlaybackService` | C | device proof |
++| 13 | App-wide navigation state | 3 bottom tabs only; route state absent | `MornicaRoute` holder; overlay screens without breaking bottom nav tests | `ui/nav/MornicaRoute.kt` | B | accessibility tests untouched |
++| 14 | Empty / permission / offline states | Library permission banner exists | Reused across new screens with same Mornica tokens | `ui/components/ShelfComponents.kt` | B | assemble |
++
++## Out of scope (do not build under this skill)
++
++- Spotify account login, social/following, comments, lyrics service, podcasts, audiobooks, ads, paywalls.
++- Any YouTube stream extraction, background YouTube audio, or third-party ripping SDK.
++- Cloud sync of user libraries until a backend contract is owner-approved (`data-source-contract.md`).
++- iOS binary (separate cross-platform project; this skill targets the Android repo only).
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/references/integration-map.md b/.agents/skills/mornica-spotify-grade-upgrade/references/integration-map.md
+new file mode 100644
+index 0000000..eb2f6cd
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/references/integration-map.md
+@@ -0,0 +1,51 @@
++# Integration map — templates → repo
++
++All target paths are relative to `app/src/main/java/com/shadowspark/morontomornica/` unless noted.
++Existing symbols were read from `main` (head `aa5d78d`); re-grep before patching if the repo moved.
++
++## Conventions to match existing code
++
++- Indent 2 spaces; trailing commas; package = folder path.
++- UI colors imported from `com.shadowspark.morontomornica.ui.*` (`MornicaEmerald`, `MornicaCyan`, `MornicaAmberStart`, `MornicaAmberEnd`, `MornicaSlateCard`, `MornicaSlateHeader`, `MornicaSlateBorder`, `MornicaSlateCardElevated`, `MornicaTextLight`, `MornicaTextMuted`, `MornicaDangerRed`, `MornicaTokens`).
++- Screens receive `uiState: MornicaUiState` and `router: PlaybackRouter`; never construct a second router.
++- Tests use JUnit4 (`org.junit.Test`), Robolectric `@Config(sdk = [34])` where Android classes appear; pure logic tests run without Robolectric.
++
++## Template files
++
++| Template (assets/templates/…) | Target path | Uses existing symbols | Creates | Approval needed |
++|---|---|---|---|---|
++| `core/reco/OnDeviceRecommender.kt` | `core/reco/OnDeviceRecommender.kt` | `LocalMediaTrack.isPlayableOffline()`, `LocalMediaTrack.artist/title/id` | `OnDeviceRecommender`, `ShelfModel`, `ArtistShelf` | None |
++| `core/reco/HomeFeedModel.kt` | `ui/home/HomeFeedModel.kt` | `LocalMediaTrack`; `ShelfModel` | `object HomeFeedModel.buildShelves(...)` | None |
++| `core/state/SleepTimerController.kt` | `core/state/SleepTimerController.kt` | Android `Handler/Looper` | `SleepTimerController` | None |
++| `data/local/PlaylistRepository.kt` | `data/local/PlaylistRepository.kt` | `org.json`; `Context.getSharedPreferences` | `PlaylistStore` (`create/names/tracks/add/removeTrack/rename/delete/move`), `InMemoryPlaylistStore`, `SharedPrefsPlaylistStore` | None (JSON, mirrors `FileDownloadStore`) |
++| `ui/nav/MornicaRoute.kt` | `ui/nav/MornicaRoute.kt` | coroutines `StateFlow/MutableStateFlow` | `MornicaRoute` (HomeFeed, Search, Downloads, Settings, Playlists, PlaylistDetail), `MornicaNav` | None |
++| `ui/components/ShelfComponents.kt` | `ui/components/ShelfComponents.kt` | Mornica tokens/colors; `LocalMediaTrack` | `SectionHeader`, `ShelfRow`, `TrackRowCompact`, `EmptyStateCard`, `GenreChip` | None |
++| `ui/home/HomeFeedScreen.kt` | `ui/home/HomeFeedScreen.kt` | `PlaybackRouter.playLocalTrack`, `MornicaUiState.localTracks/favoriteTrackIds/catalogTracks/creatorProfiles` | `HomeFeedScreen` | None |
++| `ui/search/SearchScreen.kt` | `ui/search/SearchScreen.kt` | `router.updateLocalSearchQuery`, `router.filteredAndSortedLocalTracks()`, `router.playLocalTrack` | `SearchScreen` | None |
++| `ui/playlist/PlaylistListScreen.kt` | `ui/playlist/PlaylistListScreen.kt` | `PlaylistStore.names/tracks/create` | `PlaylistListScreen` (create dialog, open detail) | None |
++| `ui/playlist/PlaylistDetailScreen.kt` | `ui/playlist/PlaylistDetailScreen.kt` | `PlaylistStore`; `router.playLocalTrack`, `router.toggleFavorite`; `MornicaUiState.activeLocalTrack/localTracks` | `PlaylistDetailScreen` (rename, delete, add-current-track, reorder, remove-track) | None |
++| `ui/library/DownloadsScreen.kt` | `ui/library/DownloadsScreen.kt` | `MornicaUiState.catalogTracks`, `catalogDownloadStates`, `router.requestCatalogDownload`, `router.cancelCatalogDownload`, `router.playDownloadedCatalogTrack` | `DownloadsScreen` | None |
++| `ui/settings/SettingsScreen.kt` | `ui/settings/SettingsScreen.kt` | `router.setWifiOnlyDownloads`, `MornicaUiState.preferWifiOnlyDownloads`, `PUBLIC_PRIVACY_POLICY_URL` | `SettingsScreen` | None |
++| `ui/player/NowPlayingEnhanced.kt` | `ui/player/NowPlayingEnhanced.kt` | router transport (`toggleLocalPlayPause`, `skipNext`, `skipPrevious`, `seekLocalTo`, `cycleRepeatMode`, `toggleShuffle`, `toggleFavorite`), `queueTrackIds`; `SleepTimerController` | `NowPlayingEnhancedSheet`, `SleepTimerDialog`, `ShareTrackAction` | None |
++| `tests/OnDeviceRecommenderTest.kt` | `app/src/test/java/com/shadowspark/morontomornica/core/reco/OnDeviceRecommenderTest.kt` | `OnDeviceRecommender` | JUnit tests | None |
++| `tests/PlaylistRepositoryTest.kt` | `app/src/test/java/com/shadowspark/morontomornica/data/local/PlaylistRepositoryTest.kt` | `InMemoryPlaylistStore` | JUnit tests | None |
++| `tests/HomeFeedModelTest.kt` | `app/src/test/java/com/shadowspark/morontomornica/ui/home/HomeFeedModelTest.kt` | `HomeFeedModel.buildShelves` | JUnit tests | None |
++
++## Existing-file patches (minimal; see `patches/existing-file-patches.md`)
++
++| File | Patch | Why |
++|---|---|---|
++| `domain/MornicaRuntime.kt` | Add `playlistStore` + `recommender` lazy wiring | New repos available to UI; idempotent |
++| `MainActivity.kt` | Instantiate `SharedPrefsPlaylistStore`, attach to runtime; record plays on track start | Persistence + recommendation history |
++| `ui/MornicaApp.kt` | Import `MornicaNav`; add top-action icons (Search/Downloads/Settings); render overlay when `MornicaNav.route != null`; `BackHandler` closes route first | Navigation without changing `PrimaryScreen.entries` (accessibility tests read those) |
++| `domain/PlaybackRouter.kt` | Optional hook: expose `queueTrackIds` removal helper `removeFromQueue(trackId)` and `playQueueIndex(index)` | Queue management (Phase C) |
++| `build.gradle.kts` / `libs.versions.toml` | **Approval-gated only:** Room, Coil, lifecycle-viewmodel-compose, media3-ui entries from `config/` snippets | Phase D hardening |
++| `AndroidManifest.xml` | **Approval-gated:** `POST_NOTIFICATIONS` (API 33+) if Media3 notification prominence changes | Phase D |
++| `docs/PLAY_STORE_DECLARATIONS.md`, `model/MornicaModels.kt` | Point privacy URL at `main` instead of the stale launch-contract branch | Correctness before any store update |
++
++## Symbol cross-checks (verify against current source before writing code)
++
++- `MornicaUiState` fields used: `localTracks`, `favoriteTrackIds`, `queueTrackIds`, `activeLocalTrack`, `isLocalPlaying`, `localPositionMs`, `localDurationMs`, `shuffleEnabled`, `repeatMode`, `catalogTracks`, `activeCatalogTrack`, `catalogDownloadStates`, `preferWifiOnlyDownloads`, `creatorProfiles`, `currentScreen`, `searchQuery`, `youtubeVideos`.
++- Router methods used: `selectScreen`, `playLocalTrack`, `playCatalogTrack`, `playDownloadedCatalogTrack`, `toggleLocalPlayPause`, `seekLocalTo`, `skipNext`, `skipPrevious`, `toggleShuffle`, `cycleRepeatMode`, `toggleFavorite`, `addToPlaylist`, `requestCatalogDownload`, `cancelCatalogDownload`, `setWifiOnlyDownloads`, `selectLibraryTab`, `updateLocalSearchQuery`, `filteredAndSortedLocalTracks`, `setNowPlayingExpanded`, `submitArtistLaunchRequest`.
++- `CatalogDownloadState`: `NONE, QUEUED, DOWNLOADING, COMPLETED, FAILED`.
++- `LocalMediaTrack` getters: `id,title,artist,album,folderName,durationMs,uri,provenance,rightsConfirmed,releaseYear`; `isPlayableOffline()`.
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/references/phase-d-proposal.md b/.agents/skills/mornica-spotify-grade-upgrade/references/phase-d-proposal.md
+new file mode 100644
+index 0000000..88dd4dc
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/references/phase-d-proposal.md
+@@ -0,0 +1,33 @@
++# Phase D — approval-gated proposal (apply nothing without a written owner decision)
++
++Phase D changes build configuration, dependencies, permissions, or release tooling. The sandbox
++and the agent must not apply these snippets. Each row records the snippet, the approval wording the
++owner must send, and the evidence that must exist before merging. Existing snippets live under
++`assets/templates/config/`; read the matching file before editing any real Gradle/Manifest file.
++
++## Gate table
++
++| # | Item | Snippet file | Required owner approval (verbatim in PR) | Mandatory evidence after apply | Rollback |
++|---|---|---|---|---|---|
++| D1 | Room persistence for playlists (replace JSON store; keep `PlaylistStore` interface) | `config/libs.versions.snippet.toml` (`room 2.6.1`); `config/app-build.snippet.kts` (KSP + room runtime/compiler) | "Approve Room adoption for playlists; keep `PlaylistStore` seam; migrate JSON users, do not drop old file." | `:app:kspDebugKotlin` green; `PlaylistRepositoryTest` green; `assembleDebug`; device relaunch shows created playlists; migration test (old JSON → DB) recorded | Revert commit; JSON file remains; no destructive migration delete until migration test passes |
++| D2 | Album art images (choose one path) — (a) no-dep MediaStore `Albums.ALBUM_ART` loader; (b) Coil `coil-compose 2.7.0` | `config/libs.versions.snippet.toml` (`coil`); `config/app-build.snippet.kts` (`implementation(libs.coil.compose)`) | "Approve art path (a) MediaStore-only / (b) Coil; no new network image host." | Screenshots of Home + player art on emulator with media; `lintDebug`; no new permission; no network call in art loader | Remove composable call; delete dependency line |
++| D3 | `media3-ui 1.5.1` helpers (only if a `PlayerView`/compact controller replaces custom transport) | `config/libs.versions.snippet.toml` (`media3Ui`); `config/app-build.snippet.kts` | "Approve media3-ui; existing `LocalAudioPlaybackService` session and rights gate unchanged." | Device proof: background session persists, queue metadata correct; `LicensedCatalogPlaybackInstrumentedTest` green | Revert dependency; custom transport returns |
++| D4 | `POST_NOTIFICATIONS` permission (API 33+) | `config/manifest.snippet.xml` | "Approve notification permission after confirming Media3 posts a foreground notification on API 33+; add runtime request before first play." | On API 33 emulator: permission dialog shown once; notification appears while playing; deny still allows playback | Remove manifest line + request branch; service still runs without notification on lower APIs |
++| D5 | Release R8/minify (`isMinifyEnabled=true`, `isShrinkResources=true`, keep rules) | `config/app-build.snippet.kts` release block | "Approve R8 release build; signing keystore remains owner-managed; do not auto-sign." | `assembleRelease` (unsigned) green; proguard rules for media3/room/coil reviewed; debug unaffected | Flip flags back to `false`; no keystore changes allowed from this agent |
++| D6 | Licensed backend per `references/data-source-contract.md` (replace demo fixtures) | contract reference only | "Approve backend contract (Firestore metadata + signed CDN); demo fallback retained until rights signs off." | `LicensedCatalogRights.evaluate` tests for real records; no offline playable record without `offlineAllowed`; demo fixtures still labeled DEMO | Revert data source; demo seam returns |
++
++## Standing prohibitions in Phase D
++
++- No Hilt/Dagger, Ktor/Retrofit, Firebase, or analytics dependency unless listed above and approved.
++- No manifest permission beyond D4; no `INTERNET` change for local playback; no cleartext config.
++- No release keystore, `key.properties`, or signing-config edit from the agent; owner runs signing.
++- No deletion of the legacy SharedPreferences/JSON playlist file before the D1 migration test passes.
++- Enhanced player sheet swap (Patch 5) is not a Phase D item; it needs a C-phase device proof first.
++
++## Suggested approval packet to the owner
++
++1. Per-row decision (approve / defer / reject) with the verbatim wording from the table.
++2. Target device API for D4 and whether the foreground notification currently posts.
++3. Chosen art path D2(a) vs D2(b).
++4. Whether D5 waits until after a signed internal-test APK exists.
++5. Owner machine gate run (`./gradlew :app:testDebugUnitTest`, `:app:lintDebug`, `:app:assembleDebug`, instrumented test) recorded with labels.
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/references/phased-plan.md b/.agents/skills/mornica-spotify-grade-upgrade/references/phased-plan.md
+new file mode 100644
+index 0000000..cab8f55
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/references/phased-plan.md
+@@ -0,0 +1,79 @@
++# Phased execution plan
++
++One branch per phase. Stop at a red gate; do not stack phases on failing state. All commands run from repo root with the pinned Gradle 9.8.2 wrapper.
++
++## Executor modes
++
++- **Local agent (Hermes/Android Studio agent):** follow this plan directly; copy `assets/templates/` files, apply `assets/templates/patches/`, run `scripts/verify.sh`.
++- **Google AI Studio (repo imported):** use `assets/ai-studio/` prompts instead. Paste `00-sync-prompt.md` first, then the phase prompt (`02`–`05`). AI Studio generates file/patch blocks but cannot run Gradle; the owner applies them, runs `scripts/verify.sh`, and feeds gate output back before the next phase. No phase advances on UNVERIFIED playback claims.
++
++## Pre-flight (every session)
++
++```bash
++git fetch origin
++git checkout main && git pull origin main
++git status --short          # confirm no uncommitted local-only gradle tweaks hidden from review
++git checkout -b feat/mornica-spotify-phase<N>-<slug>
++```
++
++## Phase A — Foundation logic (no visual change)
++
++**Scope**
++- `core/reco/OnDeviceRecommender.kt` + `ui/home/HomeFeedModel.kt`
++- `data/local/PlaylistRepository.kt` (`PlaylistStore` seam, in-memory + SharedPreferences JSON)
++- `ui/nav/MornicaRoute.kt`
++- Tests: `OnDeviceRecommenderTest`, `PlaylistRepositoryTest`, `HomeFeedModelTest`
++
++**Acceptance**
++- New logic covered by unit tests; existing 75 tests untouched and green.
++- No new dependency; no new permission; no UI wiring yet (compiles, unused symbols allowed only if referenced by Phase B patch — prefer wiring in B).
++- Gate: `testDebugUnitTest` green, `lintDebug` 0 errors, `assembleDebug` OK.
++
++**Commit:** `feat(mornica-spotify): add recommender, playlist store seam, route holder`
++
++## Phase B — Browse shell (Home, Search, Downloads, Settings)
++
++**Scope**
++- Patches: `MornicaRuntime` (attach store + recommender), `MainActivity` (wire store), `MornicaApp.kt` (nav holder + overlay + header actions).
++- Screens: `HomeFeedScreen`, `SearchScreen`, `DownloadsScreen`, `SettingsScreen`, `components/ShelfComponents`.
++- Reuse router methods only; do not alter `PrimaryScreen` enum (accessibility test iterates `entries`).
++
++**Acceptance**
++- Home shows shelves from real `uiState.localTracks` + favorites; Search filters local tracks; Downloads lists catalog states; Settings toggles Wi-Fi-only via router; all screens reachable through `MornicaNav` overlay with Back handling.
++- Device smoke: emulator launch, navigate each overlay, play one demo track from Home, toggle Wi-Fi-only, return. Record screenshots + logcat in `EXECUTION_LOG.md`.
++- Gates: unit + lint + assemble; accessibility test (`MornicaAccessibilityTest`) still green.
++
++**Commit:** `feat(mornica-spotify): home feed, search, downloads and settings overlays`
++
++## Phase C — Player depth (queue, sleep timer, share, playlist CRUD)
++
++**Scope**
++- `core/state/SleepTimerController.kt`, `ui/player/NowPlayingEnhanced.kt`.
++- `ui/playlist/PlaylistListScreen.kt` (create dialog, open detail), `ui/playlist/PlaylistDetailScreen.kt`
++  (rename, delete, add-current-track, reorder, remove-track); `PlaylistStore.create(name)` seam method.
++- Router patch (approved, additive): `removeFromQueue(trackId)`, `playQueueIndex(index)`.
++
++**Acceptance**
++- Queue list shows `queueTrackIds`; remove/jump work; sleep timer fires pause through existing `toggleLocalPlayPause` path (no second player); share intent uses `ACTION_SEND` plain text with title/artist only (no file URI exposure).
++- Playlist create/rename/delete/add/reorder covered by `PlaylistRepositoryTest`; list and detail reachable from the overflow menu.
++- Instrumented playback test stays green; device proof: play demo, open enhanced sheet, reorder queue, set 1-minute timer, verify pause callback; create a playlist, rename it, add the current track, reorder, delete.
++- Gates: unit + lint + assemble + `connectedDebugAndroidTest` (LicensedCatalogPlaybackInstrumentedTest).
++
++**Commit:** `feat(mornica-spotify): enhanced now playing, queue management, playlist detail`
++
++## Phase D — Hardening & optional persistence upgrades (owner approval per item)
++
++**Approval-gated items — each separately justified:**
++1. Room migration behind `PlaylistStore` (config snippet `libs.versions.toml` + `app/build.gradle.kts`); KSP already pinned in catalog (`ksp = "2.3.5"`).
++2. Album art: MediaStore `Albums.ALBUM_ART` loader (no new permission) or Coil (dependency snippet).
++3. `POST_NOTIFICATIONS` declaration if Media3 notification prominence targets API 33+.
++4. R8/ProGuard minification for release build; release signing remains owner-only.
++5. Backend catalog source per `data-source-contract.md` (new project, not part of app code merge until rights proven).
++
++**Acceptance**
++- Each gated item lands in its own PR with the approval note in the body; existing gates remain green; release AAB builds only when signing config exists on the owner machine.
++
++## Evidence bookkeeping (repo convention)
++
++- After each phase append to `docs/EXECUTION_LOG.md` with date, commands run, outputs (test count, lint count, APK size/hash run-specific), and labels: unit-verified / build-verified / device-verified / unverified.
++- Update `docs/agent-loop/STATE.md` "Active loop" section; mark UI pixel review unverified unless a human/multimodal reviewer signs off.
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/scripts/template_consistency_check.sh b/.agents/skills/mornica-spotify-grade-upgrade/scripts/template_consistency_check.sh
+new file mode 100755
+index 0000000..633b4a0
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/scripts/template_consistency_check.sh
+@@ -0,0 +1,71 @@
++#!/usr/bin/env bash
++# Static consistency check over bundled templates (no Android SDK required):
++# 1. Every non-test Kotlin template: package suffix matches its folder under templates/.
++# 2. Test templates: package matches the expected source package from a small map.
++# 3. Guardrail tokens absent: no yt-dlp / googlevideo extraction language in code files.
++set -uo pipefail
++
++SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
++TPL_DIR="$SKILL_DIR/assets/templates"
++fail=0
++
++check_package_path() {
++  local file="$1"
++  local rel="${file#$TPL_DIR/}"
++  local dir="$(dirname "$rel")"
++  local expected_suffix="${dir//\//.}"
++  local actual_package
++  actual_package="$(grep -E '^package ' "$file" | head -1 | sed 's/^package //; s/[[:space:]]*$//')"
++  local expected="com.shadowspark.morontomornica.$expected_suffix"
++  if [ "$actual_package" != "$expected" ]; then
++    echo "FAIL package: $rel"
++    echo "  expected: $expected"
++    echo "  actual:   $actual_package"
++    fail=1
++  fi
++}
++
++declare -A TEST_PKG=(
++  ["OnDeviceRecommenderTest.kt"]="com.shadowspark.morontomornica.core.reco"
++  ["PlaylistRepositoryTest.kt"]="com.shadowspark.morontomornica.data.local"
++  ["HomeFeedModelTest.kt"]="com.shadowspark.morontomornica.ui.home"
++)
++
++while IFS= read -r file; do
++  base="$(basename "$file")"
++  if [[ "$base" == *Test.kt ]]; then
++    expected="${TEST_PKG[$base]:-}"
++    if [ -z "$expected" ]; then
++      echo "FAIL unmapped test: $base (add TEST_PKG entry)"
++      fail=1
++      continue
++    fi
++    actual="$(grep -E '^package ' "$file" | head -1 | sed 's/^package //; s/[[:space:]]*$//')"
++    if [ "$actual" != "$expected" ]; then
++      echo "FAIL test package $base: expected $expected, got $actual"
++      fail=1
++    fi
++    if ! grep -q "@Test" "$file"; then
++      echo "FAIL test file has no @Test: $base"
++      fail=1
++    fi
++  else
++    check_package_path "$file"
++  fi
++done < <(find "$TPL_DIR" -name '*.kt' -type f | sort)
++
++# Guardrail tokens: these must never appear in template code.
++while IFS= read -r file; do
++  if grep -nE 'yt-dlp|googlevideo\.com|extractAudio|youtube\.com/watch\?v=.*(setData|setUrl|play)' "$file" >/dev/null; then
++    echo "FAIL guardrail token in: ${file#$TPL_DIR/}"
++    grep -nE 'yt-dlp|googlevideo\.com|extractAudio' "$file"
++    fail=1
++  fi
++done < <(find "$TPL_DIR" -name '*.kt' -type f)
++
++if [ "$fail" -eq 0 ]; then
++  echo "OK: template package/path and guardrail-token checks passed."
++else
++  echo "FAILED: fix the entries above before handing templates to the build agent." >&2
++  exit 1
++fi
+diff --git a/.agents/skills/mornica-spotify-grade-upgrade/scripts/verify.sh b/.agents/skills/mornica-spotify-grade-upgrade/scripts/verify.sh
+new file mode 100755
+index 0000000..83d5c1b
+--- /dev/null
++++ b/.agents/skills/mornica-spotify-grade-upgrade/scripts/verify.sh
+@@ -0,0 +1,28 @@
++#!/usr/bin/env bash
++# Mornica Spotify-grade gates. Run from anywhere; locates the repo root by walking
++# up to settings.gradle.kts. Mirrors the mandatory gates in repo AGENTS.md.
++set -euo pipefail
++
++SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++ROOT="$SCRIPT_DIR"
++while [ ! -f "$ROOT/settings.gradle.kts" ] && [ "$ROOT" != "/" ]; do
++  ROOT="$(dirname "$ROOT")"
++done
++if [ ! -f "$ROOT/settings.gradle.kts" ]; then
++  echo "ERROR: settings.gradle.kts not found above $SCRIPT_DIR" >&2
++  echo "Copy this skill into the repo (.agents/skills/mornica-spotify-grade-upgrade/) before running." >&2
++  exit 1
++fi
++cd "$ROOT"
++
++echo "== [1/3] unit tests: :app:testDebugUnitTest =="
++./gradlew :app:testDebugUnitTest
++
++echo "== [2/3] lint: :app:lintDebug (expect 0 errors) =="
++./gradlew :app:lintDebug
++
++echo "== [3/3] debug APK: :app:assembleDebug =="
++./gradlew :app:assembleDebug
++
++echo "OK: local gates green. Instrumented playback test (when touching playback):"
++echo "./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.shadowspark.morontomornica.LicensedCatalogPlaybackInstrumentedTest"
+-- 
+2.34.1
+

@@ -121,6 +121,7 @@ import com.shadowspark.morontomornica.ui.home.HomeFeedScreen
 import com.shadowspark.morontomornica.ui.library.DownloadsScreen
 import com.shadowspark.morontomornica.ui.nav.MornicaNav
 import com.shadowspark.morontomornica.ui.nav.MornicaRoute
+import com.shadowspark.morontomornica.ui.playlist.PlaylistDetailScreen
 import com.shadowspark.morontomornica.ui.search.SearchScreen
 import com.shadowspark.morontomornica.ui.settings.SettingsScreen
 
@@ -277,7 +278,14 @@ fun MornicaApp(
                 onOpenSearch = { MornicaNav.open(MornicaRoute.Search) },
                 onOpenDownloads = { MornicaNav.open(MornicaRoute.Downloads) },
               )
-            else -> Unit
+            is MornicaRoute.PlaylistDetail ->
+              PlaylistDetailScreen(
+                name = activeRoute.name,
+                store = MornicaRuntime.playlistStore,
+                uiState = uiState,
+                router = router,
+                onBack = { MornicaNav.close() },
+              )
           }
         }
       }

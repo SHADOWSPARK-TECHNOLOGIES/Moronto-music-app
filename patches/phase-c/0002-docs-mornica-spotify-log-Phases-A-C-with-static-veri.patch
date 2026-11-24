@@ -1,0 +1,93 @@
+From 3a291c1102e875f611d59afc76999bb3b64db73d Mon Sep 17 00:00:00 2001
+From: mornica-spotify-bot <spotify-grade-bot@shadowspark.local>
+Date: Tue, 24 Nov 2026 03:49:16 +0100
+Subject: [PATCH 2/2] docs(mornica-spotify): log Phases A-C with
+ static-verified / pending-gate labels
+
+---
+ docs/EXECUTION_LOG.md    | 55 ++++++++++++++++++++++++++++++++++++++++
+ docs/agent-loop/STATE.md |  8 ++++++
+ 2 files changed, 63 insertions(+)
+
+diff --git a/docs/EXECUTION_LOG.md b/docs/EXECUTION_LOG.md
+index f5bc951..20e5aa8 100644
+--- a/docs/EXECUTION_LOG.md
++++ b/docs/EXECUTION_LOG.md
+@@ -342,3 +342,58 @@ over the worktree index concurrently (exact external writer not identified).
+ (`3b8a2577…`) intact; Mornica `app/src` clean vs HEAD; commit `825d91c` contains only the 4 wrapper
+ files + ledger doc. Toolchain freeze unchanged. No secrets/credentials were involved.
+ 
++
++## 2026-11-24 — Spotify-grade upgrade Phases A–C (static-verified; Gradle/device gates pending on owner machine)
++
++Branches (local only; NO push/merge performed, per AGENTS.md hard mandate):
++- `feat/mornica-spotify-phase-a-foundation` — `f5d6cac`
++- `feat/mornica-spotify-phase-b-shell` — `27f3f57` + `a1caba9` (privacy-URL fix)
++- `feat/mornica-spotify-phase-c-player-depth` — `e59fe96`
++
++**Environment note (honest labeling):** this execution environment has NO Android SDK,
++no JDK 21, and no emulator; Kotlin/Gradle compilation cannot run here. Everything below is
++**STATIC-VERIFIED** (package/path mapping, symbol resolution against `main` head `aa5d78d`,
++guardrail-token scan, brace/paren balance, scope drift check). The owner machine must run the
++mandatory gates before any of these branches is merge-ready.
++
++### Phase A — foundation logic (`f5d6cac`)
++- Added: `core/reco/OnDeviceRecommender.kt`, `data/local/PlaylistRepository.kt`,
++  `ui/nav/MornicaRoute.kt`, `ui/home/HomeFeedModel.kt`; tests `core/reco/OnDeviceRecommenderTest.kt`,
++  `data/local/PlaylistRepositoryTest.kt`, `ui/home/HomeFeedModelTest.kt`.
++- `PlaybackRouter.kt`: `MornicaRuntime` gains `playlistStore` (InMemory default), `recommender`,
++  `onTrackPlayed`; `playLocalTrack` records history on the successful-play branch.
++- No new dependency, permission, or manifest/build-config change. No playback-path change.
++
++### Phase B — browse shell (`27f3f57`)
++- Added: `ui/components/ShelfComponents.kt`, `ui/home/HomeFeedScreen.kt`, `ui/search/SearchScreen.kt`,
++  `ui/library/DownloadsScreen.kt`, `ui/settings/SettingsScreen.kt`.
++- `MainActivity.kt`: `SharedPrefsPlaylistStore` + recommender history sink after `wireCatalogDownloads`.
++- `ui/MornicaApp.kt`: `MornicaNav` overlay route holder; Back closes an open overlay before collapsing
++  the sheet; overflow-menu entries (Home feed, Search, Downloads, Settings). `PrimaryScreen.entries`
++  untouched (accessibility test assumption preserved).
++- `a1caba9`: `PUBLIC_PRIVACY_POLICY_URL` and both `PLAY_STORE_DECLARATIONS.md` URLs repointed from the
++  stale `agent/antigravity-mornica-launch-contract-20261019` branch to `main` (owner review before any
++  Play Console submission).
++
++### Phase C — player depth (`e59fe96`)
++- Added: `core/state/SleepTimerController.kt`, `ui/player/NowPlayingEnhanced.kt`,
++  `ui/playlist/PlaylistDetailScreen.kt`.
++- `PlaybackRouter.kt`: additive `removeFromQueue(trackId)`, `playQueueIndex(index)`.
++- `ui/MornicaApp.kt`: `PlaylistDetail` overlay branch bound to `MornicaRuntime.playlistStore`.
++- **Held back (gated on device proof):** `NowPlayingEnhancedSheet` swap for `NowPlayingFullSheet`
++  (patch 5). The enhanced file compiles additively; the old sheet remains authoritative until an
++  emulator/device proof records queue removal, jump, and 1-minute timer pause through
++  `toggleLocalPlayPause()`.
++
++### Gates to run on the owner machine (unchanged from AGENTS.md)
++1. `./gradlew :app:testDebugUnitTest` — expect 75 pre-existing tests green + 3 new Phase A tests.
++2. `./gradlew :app:lintDebug` — expect 0 errors.
++3. `./gradlew :app:assembleDebug` — expect debug APK build.
++4. Device/emulator: `./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.shadowspark.morontomornica.LicensedCatalogPlaybackInstrumentedTest`.
++5. Phase B device smoke: launch, open Home feed / Search / Downloads / Settings, play one DEMO track,
++   toggle Wi-Fi-only, Back through overlays; capture screenshots + logcat here.
++
++### Scope-drift record (static)
++- Changed/added build config: none. Manifest: none. Permissions: none. Pre-existing test files: none
++  modified. YouTube guardrail: no `youtube.com`/`youtu.be`/`googlevideo.com` URI in any new code file.
++- Phase D approval-gated items (Room, Coil, POST_NOTIFICATIONS, R8, backend catalog source) NOT applied.
+diff --git a/docs/agent-loop/STATE.md b/docs/agent-loop/STATE.md
+index 64483bc..3b7da7f 100644
+--- a/docs/agent-loop/STATE.md
++++ b/docs/agent-loop/STATE.md
+@@ -104,3 +104,11 @@ Device (API 36/37 x86_64 emulator, `Medium_Phone`, 1080x2400@420 = ~411dp, headl
+   share the URI key for offline reads.
+ - `DownloadStore` is a JSON store (no Room) — a deliberate, flagged deviation from the Loop-3 contract;
+   switch to Room behind KSP only if a release candidate needs it.
++
++## Spotify-grade upgrade wave (2026-11-24, STATIC-VERIFIED; gates pending)
++- Branches `feat/mornica-spotify-phase-a-foundation` (`f5d6cac`), `feat/mornica-spotify-phase-b-shell`
++  (`27f3f57`, `a1caba9`), `feat/mornica-spotify-phase-c-player-depth` (`e59fe96`) prepared in a
++  no-SDK execution environment: additive Kotlin/Compose files + minimal router/Activity/App patches only.
++- Unit tests / lint / APK / instrumented playback: **UNVERIFIED here** — run `scripts/verify.sh` and the
++  connected test above on the owner machine before review. Enhanced now-playing sheet swap held for
++  device proof. Phase D items (Room/Coil/notification/R8/backend) remain approval-gated and untouched.
+-- 
+2.34.1
+

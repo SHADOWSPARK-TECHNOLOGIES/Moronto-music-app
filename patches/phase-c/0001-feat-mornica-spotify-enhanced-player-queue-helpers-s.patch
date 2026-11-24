@@ -1,0 +1,598 @@
+From e59fe9645951a865ad827c7dadd05da218bd8717 Mon Sep 17 00:00:00 2001
+From: mornica-spotify-bot <spotify-grade-bot@shadowspark.local>
+Date: Tue, 24 Nov 2026 03:48:29 +0100
+Subject: [PATCH 1/2] feat(mornica-spotify): enhanced player queue helpers,
+ sleep timer, playlist detail screen
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Phase C player depth (additive; old NowPlayingFullSheet retained pending device proof):
+- core/state/SleepTimerController.kt — Handler-based timer; pause flows through toggleLocalPlayPause (no second player)
+- ui/player/NowPlayingEnhanced.kt — queue list, remove/jump, share plain-text intent, sleep dialog (not wired into the sheet yet)
+- ui/playlist/PlaylistDetailScreen.kt — store-backed reorder/remove through PlaylistStore seam
+- PlaybackRouter: removeFromQueue(trackId), playQueueIndex(index) additive helpers
+- MornicaApp: PlaylistDetail overlay branch wired to MornicaRuntime.playlistStore
+
+Gates: static-verified; assembleDebug/testDebugUnitTest/lintDebug + connectedDebugAndroidTest
+UNVERIFIED in this environment (no Android SDK/emulator). Enhanced sheet swap (patch 5) held
+until a device proof on the owner machine.
+---
+ .../core/state/SleepTimerController.kt        |  41 +++
+ .../morontomornica/domain/PlaybackRouter.kt   |  18 ++
+ .../morontomornica/ui/MornicaApp.kt           |   9 +
+ .../morontomornica/ui/home/HomeFeedScreen.kt  |   3 -
+ .../ui/player/NowPlayingEnhanced.kt           | 291 ++++++++++++++++++
+ .../ui/playlist/PlaylistDetailScreen.kt       | 104 +++++++
+ .../morontomornica/ui/search/SearchScreen.kt  |   1 -
+ .../ui/settings/SettingsScreen.kt             |   1 -
+ 8 files changed, 463 insertions(+), 5 deletions(-)
+ create mode 100644 app/src/main/java/com/shadowspark/morontomornica/core/state/SleepTimerController.kt
+ create mode 100644 app/src/main/java/com/shadowspark/morontomornica/ui/player/NowPlayingEnhanced.kt
+ create mode 100644 app/src/main/java/com/shadowspark/morontomornica/ui/playlist/PlaylistDetailScreen.kt
+
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/core/state/SleepTimerController.kt b/app/src/main/java/com/shadowspark/morontomornica/core/state/SleepTimerController.kt
+new file mode 100644
+index 0000000..69af0e7
+--- /dev/null
++++ b/app/src/main/java/com/shadowspark/morontomornica/core/state/SleepTimerController.kt
+@@ -0,0 +1,41 @@
++package com.shadowspark.morontomornica.core.state
++
++import android.os.Handler
++import android.os.Looper
++
++/**
++ * Fires one callback after a number of minutes; cancel removes the pending callback.
++ * UI-side only: the resulting pause must flow through PlaybackRouter.toggleLocalPlayPause()
++ * so the real Media3 controller and its state remain authoritative. No second player.
++ */
++class SleepTimerController(
++  private val handler: Handler = Handler(Looper.getMainLooper()),
++  private val onFire: () -> Unit,
++) {
++  private var pending: Runnable? = null
++
++  var remainingMinutes: Int = 0
++    private set
++
++  val active: Boolean get() = pending != null
++
++  fun start(minutes: Int) {
++    cancel()
++    if (minutes <= 0) return
++    val runnable =
++      Runnable {
++        pending = null
++        remainingMinutes = 0
++        onFire()
++      }
++    pending = runnable
++    remainingMinutes = minutes
++    handler.postDelayed(runnable, minutes * 60_000L)
++  }
++
++  fun cancel() {
++    pending?.let { handler.removeCallbacks(it) }
++    pending = null
++    remainingMinutes = 0
++  }
++}
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/domain/PlaybackRouter.kt b/app/src/main/java/com/shadowspark/morontomornica/domain/PlaybackRouter.kt
+index 8dfb977..ecd11a7 100644
+--- a/app/src/main/java/com/shadowspark/morontomornica/domain/PlaybackRouter.kt
++++ b/app/src/main/java/com/shadowspark/morontomornica/domain/PlaybackRouter.kt
+@@ -659,6 +659,24 @@ class PlaybackRouter(
+     playLocalTrack(prevTrack)
+   }
+ 
++  /**
++   * Phase C: remove an entry from the active queue list shown in the enhanced player.
++   * Additive display-state helper; actual playback always rebuilds through [playLocalTrack]
++   * and the existing controller — no second player, no bypass of the rights gate.
++   */
++  fun removeFromQueue(trackId: String) {
++    _state.update { current ->
++      current.copy(queueTrackIds = current.queueTrackIds.filterNot { id -> id == trackId })
++    }
++  }
++
++  /** Phase C: jump to a queue entry by index and play it through the existing local path. */
++  fun playQueueIndex(index: Int) {
++    val current = _state.value
++    val trackId = current.queueTrackIds.getOrNull(index) ?: return
++    current.localTracks.firstOrNull { it.id == trackId }?.let { playLocalTrack(it) }
++  }
++
+   fun toggleShuffle() {
+     val current = _state.value
+     val nextShuffle = !current.shuffleEnabled
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/ui/MornicaApp.kt b/app/src/main/java/com/shadowspark/morontomornica/ui/MornicaApp.kt
+index 77f27b2..473e872 100644
+--- a/app/src/main/java/com/shadowspark/morontomornica/ui/MornicaApp.kt
++++ b/app/src/main/java/com/shadowspark/morontomornica/ui/MornicaApp.kt
+@@ -121,6 +121,7 @@ import com.shadowspark.morontomornica.ui.home.HomeFeedScreen
+ import com.shadowspark.morontomornica.ui.library.DownloadsScreen
+ import com.shadowspark.morontomornica.ui.nav.MornicaNav
+ import com.shadowspark.morontomornica.ui.nav.MornicaRoute
++import com.shadowspark.morontomornica.ui.playlist.PlaylistDetailScreen
+ import com.shadowspark.morontomornica.ui.search.SearchScreen
+ import com.shadowspark.morontomornica.ui.settings.SettingsScreen
+ 
+@@ -277,6 +278,14 @@ fun MornicaApp(
+                 onOpenSearch = { MornicaNav.open(MornicaRoute.Search) },
+                 onOpenDownloads = { MornicaNav.open(MornicaRoute.Downloads) },
+               )
++            is MornicaRoute.PlaylistDetail ->
++              PlaylistDetailScreen(
++                name = activeRoute.name,
++                store = MornicaRuntime.playlistStore,
++                uiState = uiState,
++                router = router,
++                onBack = { MornicaNav.close() },
++              )
+           }
+         }
+       }
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/ui/home/HomeFeedScreen.kt b/app/src/main/java/com/shadowspark/morontomornica/ui/home/HomeFeedScreen.kt
+index c6e6d78..27de39a 100644
+--- a/app/src/main/java/com/shadowspark/morontomornica/ui/home/HomeFeedScreen.kt
++++ b/app/src/main/java/com/shadowspark/morontomornica/ui/home/HomeFeedScreen.kt
+@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.PaddingValues
+ import androidx.compose.foundation.layout.Row
+ import androidx.compose.foundation.layout.Spacer
+ import androidx.compose.foundation.layout.fillMaxSize
+-import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.foundation.layout.height
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.lazy.LazyColumn
+@@ -20,7 +19,6 @@ import androidx.compose.material3.OutlinedButton
+ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.remember
+-import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.unit.dp
+@@ -30,7 +28,6 @@ import com.shadowspark.morontomornica.domain.PlaybackRouter
+ import com.shadowspark.morontomornica.ui.MornicaCyan
+ import com.shadowspark.morontomornica.ui.MornicaEmerald
+ import com.shadowspark.morontomornica.ui.MornicaTextLight
+-import com.shadowspark.morontomornica.ui.MornicaTextMuted
+ import com.shadowspark.morontomornica.ui.components.EmptyStateCard
+ import com.shadowspark.morontomornica.ui.components.ShelfRow
+ 
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/ui/player/NowPlayingEnhanced.kt b/app/src/main/java/com/shadowspark/morontomornica/ui/player/NowPlayingEnhanced.kt
+new file mode 100644
+index 0000000..3d0ad54
+--- /dev/null
++++ b/app/src/main/java/com/shadowspark/morontomornica/ui/player/NowPlayingEnhanced.kt
+@@ -0,0 +1,291 @@
++package com.shadowspark.morontomornica.ui.player
++
++import android.content.Intent
++import androidx.compose.foundation.background
++import androidx.compose.foundation.border
++import androidx.compose.foundation.clickable
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.Spacer
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.size
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.lazy.items
++import androidx.compose.foundation.shape.CircleShape
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.filled.Close
++import androidx.compose.material.icons.filled.Favorite
++import androidx.compose.material.icons.filled.FavoriteBorder
++import androidx.compose.material.icons.filled.KeyboardArrowDown
++import androidx.compose.material.icons.filled.MusicNote
++import androidx.compose.material.icons.filled.Pause
++import androidx.compose.material.icons.filled.PlayArrow
++import androidx.compose.material.icons.filled.Repeat
++import androidx.compose.material.icons.filled.RepeatOne
++import androidx.compose.material.icons.filled.Share
++import androidx.compose.material.icons.filled.Shuffle
++import androidx.compose.material.icons.filled.SkipNext
++import androidx.compose.material.icons.filled.SkipPrevious
++import androidx.compose.material.icons.filled.Timer
++import androidx.compose.material3.AlertDialog
++import androidx.compose.material3.Icon
++import androidx.compose.material3.IconButton
++import androidx.compose.material3.IconToggleButton
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Slider
++import androidx.compose.material3.Surface
++import androidx.compose.material3.Text
++import androidx.compose.material3.TextButton
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.setValue
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.clip
++import androidx.compose.ui.graphics.Brush
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.platform.LocalContext
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.dp
++import com.shadowspark.morontomornica.core.state.SleepTimerController
++import com.shadowspark.morontomornica.domain.MornicaUiState
++import com.shadowspark.morontomornica.domain.PlaybackRouter
++import com.shadowspark.morontomornica.model.RepeatMode
++import com.shadowspark.morontomornica.ui.MornicaAmberGradient
++import com.shadowspark.morontomornica.ui.MornicaCyan
++import com.shadowspark.morontomornica.ui.MornicaDangerRed
++import com.shadowspark.morontomornica.ui.MornicaEmerald
++import com.shadowspark.morontomornica.ui.MornicaEmeraldDark
++import com.shadowspark.morontomornica.ui.MornicaMidnightBg
++import com.shadowspark.morontomornica.ui.MornicaSlateBorder
++import com.shadowspark.morontomornica.ui.MornicaSlateCard
++import com.shadowspark.morontomornica.ui.MornicaSlateCardElevated
++import com.shadowspark.morontomornica.ui.MornicaSlateHeader
++import com.shadowspark.morontomornica.ui.MornicaTextLight
++import com.shadowspark.morontomornica.ui.MornicaTextMuted
++import com.shadowspark.morontomornica.ui.MornicaTokens
++import com.shadowspark.morontomornica.ui.components.TrackRowCompact
++
++/**
++ * Enhanced Now Playing sheet: artwork slot, transport, sleep timer, share, and the
++ * active queue with remove. Playback always flows through [router]; [sleepTimer] only
++ * requests a pause through [PlaybackRouter.toggleLocalPlayPause] — it never controls a player.
++ *
++ * [onRemoveFromQueue] is supplied by the Phase-C router patch (see patches/existing-file-patches.md);
++ * until that patch lands, pass a no-op lambda and keep the remove action hidden behind that gate.
++ */
++@Composable
++fun NowPlayingEnhancedSheet(
++  uiState: MornicaUiState,
++  router: PlaybackRouter,
++  sleepTimer: SleepTimerController,
++  onRemoveFromQueue: (String) -> Unit,
++  onCollapse: () -> Unit,
++) {
++  val active = uiState.activeLocalTrack ?: return
++  val context = LocalContext.current
++  var showTimer by remember { mutableStateOf(false) }
++
++  val maxDuration = uiState.localDurationMs.coerceAtLeast(1_000L)
++  val position = uiState.localPositionMs.coerceIn(0L, maxDuration)
++  val queueTracks =
++    uiState.queueTrackIds.mapNotNull { id -> uiState.localTracks.firstOrNull { it.id == id } }
++
++  Surface(modifier = Modifier.fillMaxSize(), color = MornicaMidnightBg) {
++    LazyColumn(
++      modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
++      verticalArrangement = Arrangement.spacedBy(14.dp),
++    ) {
++      item {
++        Row(
++          modifier = Modifier.fillMaxWidth(),
++          horizontalArrangement = Arrangement.SpaceBetween,
++          verticalAlignment = Alignment.CenterVertically,
++        ) {
++          IconButton(onClick = onCollapse) {
++            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Collapse player", tint = MornicaTextLight)
++          }
++          Text("NOW PLAYING OFFLINE", style = MaterialTheme.typography.labelSmall, color = MornicaEmerald, fontWeight = FontWeight.Bold)
++          IconToggleButton(checked = uiState.favoriteTrackIds.contains(active.id), onCheckedChange = { router.toggleFavorite(active.id) }) {
++            Icon(
++              if (uiState.favoriteTrackIds.contains(active.id)) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
++              contentDescription = "Favorite track",
++              tint = if (uiState.favoriteTrackIds.contains(active.id)) MornicaDangerRed else MornicaTextMuted,
++            )
++          }
++        }
++      }
++
++      item {
++        Box(
++          modifier =
++            Modifier
++              .fillMaxWidth()
++              .height(230.dp)
++              .clip(RoundedCornerShape(MornicaTokens.NowPlayingArtworkRadius))
++              .background(
++                Brush.linearGradient(listOf(MornicaSlateCardElevated, MornicaEmeraldDark, MornicaSlateCard)),
++              )
++              .border(1.dp, MornicaSlateBorder, RoundedCornerShape(MornicaTokens.NowPlayingArtworkRadius)),
++          contentAlignment = Alignment.Center,
++        ) {
++          Box(
++            modifier = Modifier.size(88.dp).clip(CircleShape).background(MornicaSlateHeader).border(2.dp, MornicaEmerald, CircleShape),
++            contentAlignment = Alignment.Center,
++          ) {
++            Icon(Icons.Default.MusicNote, contentDescription = null, tint = MornicaEmerald, modifier = Modifier.size(44.dp))
++          }
++        }
++      }
++
++      item {
++        Column {
++          Text(active.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = MornicaTextLight)
++          Text("${active.artist} • ${active.album}", style = MaterialTheme.typography.bodyMedium, color = MornicaCyan, fontWeight = FontWeight.SemiBold)
++          uiState.playbackError?.let { err ->
++            Spacer(Modifier.height(6.dp))
++            Text("Playback error: $err", style = MaterialTheme.typography.labelSmall, color = MornicaDangerRed)
++          }
++        }
++      }
++
++      item {
++        Column {
++          Slider(
++            value = position.toFloat(),
++            onValueChange = { router.seekLocalTo(it.toLong()) },
++            valueRange = 0f..maxDuration.toFloat(),
++          )
++          Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
++            Text(formatMs(position), style = MaterialTheme.typography.labelMedium, color = MornicaTextMuted)
++            Text(formatMs(maxDuration), style = MaterialTheme.typography.labelMedium, color = MornicaTextMuted)
++          }
++        }
++      }
++
++      item {
++        Row(
++          modifier = Modifier.fillMaxWidth(),
++          horizontalArrangement = Arrangement.SpaceEvenly,
++          verticalAlignment = Alignment.CenterVertically,
++        ) {
++          IconToggleButton(checked = uiState.shuffleEnabled, onCheckedChange = { router.toggleShuffle() }) {
++            Icon(Icons.Default.Shuffle, contentDescription = "Toggle shuffle", tint = if (uiState.shuffleEnabled) MornicaEmerald else MornicaTextMuted)
++          }
++          IconButton(onClick = { router.skipPrevious() }) {
++            Icon(Icons.Default.SkipPrevious, contentDescription = "Previous", tint = MornicaTextLight)
++          }
++          Box(
++            modifier = Modifier.size(68.dp).clip(CircleShape).background(MornicaAmberGradient).clickable { router.toggleLocalPlayPause() },
++            contentAlignment = Alignment.Center,
++          ) {
++            Icon(
++              if (uiState.isLocalPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
++              contentDescription = if (uiState.isLocalPlaying) "Pause" else "Play",
++              tint = Color(0xFF0B101B),
++              modifier = Modifier.size(34.dp),
++            )
++          }
++          IconButton(onClick = { router.skipNext() }) {
++            Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = MornicaTextLight)
++          }
++          IconButton(onClick = { router.cycleRepeatMode() }) {
++            Icon(
++              if (uiState.repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
++              contentDescription = "Repeat mode: ${uiState.repeatMode.name}",
++              tint = if (uiState.repeatMode != RepeatMode.OFF) MornicaEmerald else MornicaTextMuted,
++            )
++          }
++        }
++      }
++
++      item {
++        Row(
++          modifier = Modifier.fillMaxWidth(),
++          horizontalArrangement = Arrangement.SpaceBetween,
++          verticalAlignment = Alignment.CenterVertically,
++        ) {
++          TextButton(onClick = { showTimer = true }) {
++            Icon(Icons.Default.Timer, contentDescription = null, tint = MornicaCyan)
++            Text(
++              if (sleepTimer.active) "Sleep timer ${sleepTimer.remainingMinutes}m" else "Sleep timer",
++              color = MornicaCyan,
++              modifier = Modifier.padding(start = 6.dp),
++            )
++          }
++          TextButton(onClick = {
++            val share =
++              Intent(Intent.ACTION_SEND).apply {
++                type = "text/plain"
++                putExtra(Intent.EXTRA_TEXT, "${active.title} · ${active.artist} — playing in Mornica")
++              }
++            context.startActivity(Intent.createChooser(share, "Share track"))
++          }) {
++            Icon(Icons.Default.Share, contentDescription = null, tint = MornicaCyan)
++            Text("Share", color = MornicaCyan, modifier = Modifier.padding(start = 6.dp))
++          }
++        }
++      }
++
++      item {
++        Text(
++          "QUEUE · ${queueTracks.size}",
++          style = MaterialTheme.typography.labelMedium,
++          color = MornicaCyan,
++          fontWeight = FontWeight.Bold,
++        )
++      }
++
++      items(queueTracks, key = { it.id }) { q ->
++        TrackRowCompact(
++          track = q,
++          subtitle = q.artist,
++          onClick = { router.playLocalTrack(q) },
++          trailing = {
++            IconButton(onClick = { onRemoveFromQueue(q.id) }) {
++              Icon(Icons.Default.Close, contentDescription = "Remove from queue", tint = MornicaTextMuted)
++            }
++          },
++        )
++      }
++    }
++  }
++
++  if (showTimer) {
++    AlertDialog(
++      onDismissRequest = { showTimer = false },
++      title = { Text("Sleep timer") },
++      text = {
++        Column {
++          listOf(15, 30, 45, 60).forEach { minutes ->
++            TextButton(onClick = {
++              // The pause callback was supplied when SleepTimerController was constructed
++              // (MornicaApp patch 5); the dialog only chooses the duration and starts it.
++              sleepTimer.start(minutes)
++              showTimer = false
++            }) {
++              Text("$minutes minutes")
++            }
++          }
++          if (sleepTimer.active) {
++            TextButton(onClick = { sleepTimer.cancel() }) { Text("Cancel timer") }
++          }
++        }
++      },
++      confirmButton = { TextButton(onClick = { showTimer = false }) { Text("Close") } },
++    )
++  }
++}
++
++private fun formatMs(ms: Long): String {
++  val totalSeconds = (ms.coerceAtLeast(0L) / 1_000L).toInt()
++  return "%d:%02d".format(totalSeconds / 60, totalSeconds % 60)
++}
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/ui/playlist/PlaylistDetailScreen.kt b/app/src/main/java/com/shadowspark/morontomornica/ui/playlist/PlaylistDetailScreen.kt
+new file mode 100644
+index 0000000..33cce40
+--- /dev/null
++++ b/app/src/main/java/com/shadowspark/morontomornica/ui/playlist/PlaylistDetailScreen.kt
+@@ -0,0 +1,104 @@
++package com.shadowspark.morontomornica.ui.playlist
++
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.PaddingValues
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.lazy.itemsIndexed
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.automirrored.filled.ArrowBack
++import androidx.compose.material.icons.filled.ArrowDownward
++import androidx.compose.material.icons.filled.ArrowUpward
++import androidx.compose.material.icons.filled.Close
++import androidx.compose.material.icons.filled.PlayArrow
++import androidx.compose.material3.Icon
++import androidx.compose.material3.IconButton
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableIntStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.setValue
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.dp
++import com.shadowspark.morontomornica.data.local.PlaylistStore
++import com.shadowspark.morontomornica.domain.MornicaUiState
++import com.shadowspark.morontomornica.domain.PlaybackRouter
++import com.shadowspark.morontomornica.ui.MornicaEmerald
++import com.shadowspark.morontomornica.ui.MornicaTextLight
++import com.shadowspark.morontomornica.ui.MornicaTextMuted
++import com.shadowspark.morontomornica.ui.components.TrackRowCompact
++
++/**
++ * Playlist detail backed by [PlaylistStore]. Reorder/remove actions bump [version] so the
++ * snapshot recomposes; when Room replaces the store, observe its Flow instead of this counter.
++ */
++@Composable
++fun PlaylistDetailScreen(
++  name: String,
++  store: PlaylistStore,
++  uiState: MornicaUiState,
++  router: PlaybackRouter,
++  onBack: () -> Unit,
++) {
++  var version by remember { mutableIntStateOf(0) }
++  val ids = remember(version, name) { store.tracks(name) }
++  val tracks = remember(version, ids, uiState.localTracks) {
++    uiState.localTracks.filter { it.id in ids }
++  }
++
++  Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
++    Row(verticalAlignment = Alignment.CenterVertically) {
++      IconButton(onClick = onBack) {
++        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MornicaEmerald)
++      }
++      Column(modifier = Modifier.weight(1f)) {
++        Text(name, style = MaterialTheme.typography.titleLarge, color = MornicaTextLight, fontWeight = FontWeight.Bold)
++        Text("${tracks.size} tracks", style = MaterialTheme.typography.labelMedium, color = MornicaTextMuted)
++      }
++      IconButton(onClick = { tracks.firstOrNull()?.let { router.playLocalTrack(it) } }) {
++        Icon(Icons.Default.PlayArrow, contentDescription = "Play playlist", tint = MornicaEmerald)
++      }
++    }
++
++    LazyColumn(contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
++      itemsIndexed(tracks, key = { _, track -> track.id }) { index, track ->
++        TrackRowCompact(
++          track = track,
++          subtitle = track.artist,
++          onClick = { router.playLocalTrack(track) },
++          trailing = {
++            IconButton(onClick = {
++              if (index > 0) {
++                store.move(name, index, index - 1)
++                version++
++              }
++            }) {
++              Icon(Icons.Default.ArrowUpward, contentDescription = "Move up", tint = MornicaTextMuted)
++            }
++            IconButton(onClick = {
++              if (index < tracks.lastIndex) {
++                store.move(name, index, index + 1)
++                version++
++              }
++            }) {
++              Icon(Icons.Default.ArrowDownward, contentDescription = "Move down", tint = MornicaTextMuted)
++            }
++            IconButton(onClick = {
++              store.removeTrack(name, track.id)
++              version++
++            }) {
++              Icon(Icons.Default.Close, contentDescription = "Remove from playlist", tint = MornicaTextMuted)
++            }
++          },
++        )
++      }
++    }
++  }
++}
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/ui/search/SearchScreen.kt b/app/src/main/java/com/shadowspark/morontomornica/ui/search/SearchScreen.kt
+index 636251d..a520d7f 100644
+--- a/app/src/main/java/com/shadowspark/morontomornica/ui/search/SearchScreen.kt
++++ b/app/src/main/java/com/shadowspark/morontomornica/ui/search/SearchScreen.kt
+@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.Search
+ import androidx.compose.material3.ExperimentalMaterial3Api
+ import androidx.compose.material3.Icon
+ import androidx.compose.material3.IconButton
+-import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.OutlinedTextField
+ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/ui/settings/SettingsScreen.kt b/app/src/main/java/com/shadowspark/morontomornica/ui/settings/SettingsScreen.kt
+index 5514526..b67ae59 100644
+--- a/app/src/main/java/com/shadowspark/morontomornica/ui/settings/SettingsScreen.kt
++++ b/app/src/main/java/com/shadowspark/morontomornica/ui/settings/SettingsScreen.kt
+@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.foundation.layout.height
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.lazy.LazyColumn
+-import androidx.compose.foundation.lazy.items
+ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.automirrored.filled.ArrowBack
+ import androidx.compose.material.icons.filled.PrivacyTip
+-- 
+2.34.1
+

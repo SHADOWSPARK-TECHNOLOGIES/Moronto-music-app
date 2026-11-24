@@ -1,0 +1,43 @@
+From a1caba9609cef5cc43ed7d1dcccc58ab67a58e27 Mon Sep 17 00:00:00 2001
+From: mornica-spotify-bot <spotify-grade-bot@shadowspark.local>
+Date: Tue, 24 Nov 2026 03:46:03 +0100
+Subject: [PATCH 2/2] fix(mornica-spotify): point privacy policy URLs at main
+ branch
+
+Replaces the stale launch-contract branch URL in PUBLIC_PRIVACY_POLICY_URL and both
+declaration-pack URLs with main. No behavior change; correctness fix before any store update
+(owner review required before Play Console submission).
+---
+ .../com/shadowspark/morontomornica/model/MornicaModels.kt     | 2 +-
+ docs/PLAY_STORE_DECLARATIONS.md                               | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/app/src/main/java/com/shadowspark/morontomornica/model/MornicaModels.kt b/app/src/main/java/com/shadowspark/morontomornica/model/MornicaModels.kt
+index 9700eb2..79cc6ab 100644
+--- a/app/src/main/java/com/shadowspark/morontomornica/model/MornicaModels.kt
++++ b/app/src/main/java/com/shadowspark/morontomornica/model/MornicaModels.kt
+@@ -177,4 +177,4 @@ fun validateArtistLaunchRequest(request: ArtistLaunchRequest): ValidationResult
+ }
+ 
+ const val PUBLIC_PRIVACY_POLICY_URL =
+-  "https://github.com/SHADOWSPARK-TECHNOLOGIES/Moronto-music-app/blob/agent/antigravity-mornica-launch-contract-20261019/docs/PRIVACY_POLICY.md"
++  "https://github.com/SHADOWSPARK-TECHNOLOGIES/Moronto-music-app/blob/main/docs/PRIVACY_POLICY.md"
+diff --git a/docs/PLAY_STORE_DECLARATIONS.md b/docs/PLAY_STORE_DECLARATIONS.md
+index e1febe1..12debea 100644
+--- a/docs/PLAY_STORE_DECLARATIONS.md
++++ b/docs/PLAY_STORE_DECLARATIONS.md
+@@ -7,9 +7,9 @@ This packet contains the verified, copy-paste-ready declarations for **Google Pl
+ ## 1. Public Privacy Policy URL (`VERIFIED`)
+ 
+ - **Public GitHub Blob URL (HTML-rendered):**  
+-  `https://github.com/SHADOWSPARK-TECHNOLOGIES/Moronto-music-app/blob/agent/antigravity-mornica-launch-contract-20261019/docs/PRIVACY_POLICY.md`
++  `https://github.com/SHADOWSPARK-TECHNOLOGIES/Moronto-music-app/blob/main/docs/PRIVACY_POLICY.md`
+ - **Public Raw HTTPS URL:**  
+-  `https://raw.githubusercontent.com/SHADOWSPARK-TECHNOLOGIES/Moronto-music-app/agent/antigravity-mornica-launch-contract-20261019/docs/PRIVACY_POLICY.md`
++  `https://raw.githubusercontent.com/SHADOWSPARK-TECHNOLOGIES/Moronto-music-app/main/docs/PRIVACY_POLICY.md`
+ - **In-App Link:** Wired directly in `CreatorHubScreen` (`app/src/main/java/com/shadowspark/morontomornica/ui/MornicaApp.kt`) via the **"Open Public Privacy Policy"** button (`Intent.ACTION_VIEW`).
+ 
+ ---
+-- 
+2.34.1
+
