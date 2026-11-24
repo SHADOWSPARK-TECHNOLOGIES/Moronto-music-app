@@ -342,3 +342,10 @@ over the worktree index concurrently (exact external writer not identified).
 (`3b8a2577…`) intact; Mornica `app/src` clean vs HEAD; commit `825d91c` contains only the 4 wrapper
 files + ledger doc. Toolchain freeze unchanged. No secrets/credentials were involved.
 
+
+## [2026-11-24 16:13:25] Phase A: Foundation Logic — unit-verified / build-verified
+- Branch: feat/mornica-spotify-phase-a-foundation (HEAD: $(git rev-parse HEAD))
+- Unit Tests: 88 executed, 88 passed, 0 failures (:app:testDebugUnitTest)
+- Lint: 0 errors (:app:lintDebug)
+- Build: BUILD SUCCESSFUL (:app:assembleDebug) -> app/build/outputs/apk/debug/app-debug.apk
+- Status: VERIFIED
