@@ -277,6 +277,7 @@ fun MornicaApp(
                 onOpenSearch = { MornicaNav.open(MornicaRoute.Search) },
                 onOpenDownloads = { MornicaNav.open(MornicaRoute.Downloads) },
               )
+            else -> Unit
           }
         }
       }
