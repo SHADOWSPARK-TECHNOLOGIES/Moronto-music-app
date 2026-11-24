@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.DownloadForOffline
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.ExpandLess
@@ -115,6 +116,13 @@ import com.shadowspark.morontomornica.model.ProvenanceStatus
 import com.shadowspark.morontomornica.model.RepeatMode
 import com.shadowspark.morontomornica.model.TrackSortOption
 import com.shadowspark.morontomornica.model.YouTubeVideoCard
+import com.shadowspark.morontomornica.domain.MornicaRuntime
+import com.shadowspark.morontomornica.ui.home.HomeFeedScreen
+import com.shadowspark.morontomornica.ui.library.DownloadsScreen
+import com.shadowspark.morontomornica.ui.nav.MornicaNav
+import com.shadowspark.morontomornica.ui.nav.MornicaRoute
+import com.shadowspark.morontomornica.ui.search.SearchScreen
+import com.shadowspark.morontomornica.ui.settings.SettingsScreen
 
 @Composable
 fun MornicaApp(
@@ -124,18 +132,24 @@ fun MornicaApp(
 ) {
   val uiState by router.state.collectAsState()
   val context = LocalContext.current
+  // Phase B overlay navigation: Search / Downloads / Settings / Home feed render above the
+  // active primary tab; the three PrimaryScreens and their accessibility enumeration are unchanged.
+  val route by MornicaNav.route.collectAsState()
 
   // Back navigation: collapse an expanded Now Playing sheet first, then return to My Music
   // from the other primary screens. On the My Music home screen (sheet collapsed) Back is
   // left untouched so the system default (leave the app) still applies.
+  val overlayOpen = route != null
   val backEnabled =
-    (uiState.isNowPlayingExpanded && uiState.activeLocalTrack != null) ||
+    overlayOpen ||
+      (uiState.isNowPlayingExpanded && uiState.activeLocalTrack != null) ||
       uiState.currentScreen != PrimaryScreen.MY_MUSIC
   BackHandler(enabled = backEnabled) {
-    if (uiState.isNowPlayingExpanded && uiState.activeLocalTrack != null) {
-      router.setNowPlayingExpanded(false)
-    } else {
-      router.selectScreen(PrimaryScreen.MY_MUSIC)
+    when {
+      route != null -> MornicaNav.close()
+      uiState.isNowPlayingExpanded && uiState.activeLocalTrack != null ->
+        router.setNowPlayingExpanded(false)
+      else -> router.selectScreen(PrimaryScreen.MY_MUSIC)
     }
   }
 
@@ -244,6 +258,26 @@ fun MornicaApp(
             uiState = uiState,
             router = router,
           )
+        }
+
+        // Phase B overlay screens (full-screen above the active tab; Back closes the route first).
+        route?.let { activeRoute ->
+          when (activeRoute) {
+            MornicaRoute.Search ->
+              SearchScreen(uiState = uiState, router = router, onBack = { MornicaNav.close() })
+            MornicaRoute.Downloads ->
+              DownloadsScreen(uiState = uiState, router = router, onBack = { MornicaNav.close() })
+            MornicaRoute.Settings ->
+              SettingsScreen(uiState = uiState, router = router, onBack = { MornicaNav.close() })
+            MornicaRoute.HomeFeed ->
+              HomeFeedScreen(
+                uiState = uiState,
+                router = router,
+                recommender = MornicaRuntime.recommender,
+                onOpenSearch = { MornicaNav.open(MornicaRoute.Search) },
+                onOpenDownloads = { MornicaNav.open(MornicaRoute.Downloads) },
+              )
+          }
         }
       }
     }
@@ -359,6 +393,46 @@ private fun MorontoTopHeader(
               onClick = {
                 overflowExpanded = false
                 onInfoClick()
+              },
+              leadingIcon = {
+                Icon(Icons.Default.Info, contentDescription = null)
+              },
+            )
+            DropdownMenuItem(
+              text = { Text("Home feed") },
+              onClick = {
+                overflowExpanded = false
+                MornicaNav.open(MornicaRoute.HomeFeed)
+              },
+              leadingIcon = {
+                Icon(Icons.Default.MusicNote, contentDescription = null)
+              },
+            )
+            DropdownMenuItem(
+              text = { Text("Search library") },
+              onClick = {
+                overflowExpanded = false
+                MornicaNav.open(MornicaRoute.Search)
+              },
+              leadingIcon = {
+                Icon(Icons.Default.Search, contentDescription = null)
+              },
+            )
+            DropdownMenuItem(
+              text = { Text("Downloads") },
+              onClick = {
+                overflowExpanded = false
+                MornicaNav.open(MornicaRoute.Downloads)
+              },
+              leadingIcon = {
+                Icon(Icons.Default.DownloadForOffline, contentDescription = null)
+              },
+            )
+            DropdownMenuItem(
+              text = { Text("Settings") },
+              onClick = {
+                overflowExpanded = false
+                MornicaNav.open(MornicaRoute.Settings)
               },
               leadingIcon = {
                 Icon(Icons.Default.Info, contentDescription = null)

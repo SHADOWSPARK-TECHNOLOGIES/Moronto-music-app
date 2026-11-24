@@ -37,6 +37,11 @@ class MainActivity : ComponentActivity() {
     }
     // Loop 4: enable catalogue downloads (DownloadService), cancel, and Wi-Fi-only on the real manager.
     MornicaRuntime.wireCatalogDownloads(appContext)
+    // Phase B: JSON-backed playlist persistence (mirrors the DownloadStore seam) and the
+    // on-device recommendation history sink. No network, no new permission.
+    MornicaRuntime.playlistStore =
+      com.shadowspark.morontomornica.data.local.SharedPrefsPlaylistStore(applicationContext)
+    MornicaRuntime.onTrackPlayed = { trackId -> MornicaRuntime.recommender.recordPlay(trackId) }
     ensurePlaybackServiceStarted()
 
     val initialGranted = hasAudioReadPermission()
