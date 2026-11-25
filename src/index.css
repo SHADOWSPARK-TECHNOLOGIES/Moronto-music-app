@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+:root {
+  --mornica-midnight-bg: #071321;
+  --mornica-slate-header: #0b1727;
+  --mornica-slate-card: #14243a;
+  --mornica-slate-card-elevated: #1b2f4d;
+  --mornica-slate-border: #24344d;
+  --mornica-emerald: #12d9a1;
+  --mornica-emerald-dark: #062e22;
+  --mornica-cyan: #20b6eb;
+  --mornica-amber-start: #ffbe55;
+  --mornica-amber-end: #ea580c;
+  --mornica-danger-red: #ff6479;
+  --mornica-text-light: #f4fafe;
+  --mornica-text-muted: #a5b6ca;
+}
+
+body {
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--mornica-midnight-bg);
+  color: var(--mornica-text-light);
+  margin: 0;
+}
+
+.font-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.mornica-amber-gradient {
+  background: linear-gradient(90deg, #ffbe55 0%, #ea580c 100%);
+}
+
+/* Custom range slider styling matching Mornica Seek Bar */
+input[type="range"].mornica-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 9999px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"].mornica-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #ffbe55;
+  border: 2px solid #071321;
+  box-shadow: 0 0 0 2px rgba(255, 190, 85, 0.25);
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+input[type="range"].mornica-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+input[type="range"].mornica-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #ffbe55;
+  border: 2px solid #071321;
+  cursor: pointer;
+}
