@@ -112,3 +112,13 @@ Device (API 36/37 x86_64 emulator, `Medium_Phone`, 1080x2400@420 = ~411dp, headl
 - Unit tests / lint / APK / instrumented playback: **UNVERIFIED here** — run `scripts/verify.sh` and the
   connected test above on the owner machine before review. Enhanced now-playing sheet swap held for
   device proof. Phase D items (Room/Coil/notification/R8/backend) remain approval-gated and untouched.
+
+## Phase C2 reconciled 2026-11-26 (unit-verified / build-verified)
+- The pending Google AI Studio patch `patches/phase-c2/0001-…patch` is now applied in the working tree
+  on `feat/mornica-spotify-phase-c-player-depth`: playlist CRUD, list screen, route + overflow entry,
+  detail-screen rename/delete/add-current, and 2 new tests. The empty-playlist reload bug is fixed.
+- Verified locally: 90/90 unit tests, lint 0 errors (35 warnings), `:app:assembleDebug` BUILD SUCCESSFUL.
+- Follow-up review fixes: playlist reorder/rename/empty-reload correctness, opaque overlay backgrounds,
+  search-chip query mirroring, live home shelves, and a working sleep-timer menu → 91/91 tests green.
+- Still UNVERIFIED: device/emulator proof of playlist UX and the enhanced now-playing sheet (kept behind
+  its proof gate), plus Phase D items. Nothing pushed, merged, signed, or published.

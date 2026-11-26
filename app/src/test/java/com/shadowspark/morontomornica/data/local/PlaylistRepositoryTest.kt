@@ -48,4 +48,35 @@ class PlaylistRepositoryTest {
 
     assertFalse(store.move(name, 0, 99))
   }
+
+  @Test
+  fun create_rejectsBlankAndDuplicateNames() {
+    assertFalse(store.create("   "))
+    assertTrue(store.create("Morning Drive"))
+    assertFalse(store.create("Morning Drive"))
+    assertTrue(store.names().contains("Morning Drive"))
+    assertTrue(store.tracks("Morning Drive").isEmpty())
+  }
+
+  @Test
+  fun rename_preservesTrackIds() {
+    assertTrue(store.create("Working Title"))
+    assertTrue(store.add("Working Title", "t1"))
+    assertTrue(store.rename("Working Title", "Lagos Drive"))
+    assertEquals(listOf("t1"), store.tracks("Lagos Drive"))
+    assertFalse(store.names().contains("Working Title"))
+  }
+
+  @Test
+  fun rename_rejectsExistingDestination() {
+    assertTrue(store.create("A"))
+    assertTrue(store.create("B"))
+    assertTrue(store.add("A", "t1"))
+    assertTrue(store.add("B", "t2"))
+
+    assertFalse(store.rename("A", "B"))
+
+    assertEquals(listOf("t1"), store.tracks("A"))
+    assertEquals(listOf("t2"), store.tracks("B"))
+  }
 }

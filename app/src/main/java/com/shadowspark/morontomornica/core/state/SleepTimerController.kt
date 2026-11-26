@@ -2,6 +2,9 @@ package com.shadowspark.morontomornica.core.state
 
 import android.os.Handler
 import android.os.Looper
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Fires one callback after a number of minutes; cancel removes the pending callback.
@@ -13,10 +16,11 @@ class SleepTimerController(
   private val onFire: () -> Unit,
 ) {
   private var pending: Runnable? = null
+  private val _remaining = MutableStateFlow(0)
 
-  var remainingMinutes: Int = 0
-    private set
-
+  /** Observe this in Compose so the countdown label recomposes; plain fields never trigger it. */
+  val remainingMinutesFlow: StateFlow<Int> = _remaining.asStateFlow()
+  val remainingMinutes: Int get() = _remaining.value
   val active: Boolean get() = pending != null
 
   fun start(minutes: Int) {
@@ -25,17 +29,17 @@ class SleepTimerController(
     val runnable =
       Runnable {
         pending = null
-        remainingMinutes = 0
+        _remaining.value = 0
         onFire()
       }
     pending = runnable
-    remainingMinutes = minutes
+    _remaining.value = minutes
     handler.postDelayed(runnable, minutes * 60_000L)
   }
 
   fun cancel() {
     pending?.let { handler.removeCallbacks(it) }
     pending = null
-    remainingMinutes = 0
+    _remaining.value = 0
   }
 }

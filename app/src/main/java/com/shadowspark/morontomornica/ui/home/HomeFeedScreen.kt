@@ -18,6 +18,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -43,8 +45,9 @@ fun HomeFeedScreen(
   onOpenSearch: () -> Unit,
   onOpenDownloads: () -> Unit,
 ) {
+  val historyVersion by recommender.historyVersion.collectAsState()
   val feed =
-    remember(uiState.localTracks, uiState.favoriteTrackIds) {
+    remember(uiState.localTracks, uiState.favoriteTrackIds, historyVersion) {
       HomeFeedModel.build(uiState.localTracks, uiState.favoriteTrackIds, recommender)
     }
 

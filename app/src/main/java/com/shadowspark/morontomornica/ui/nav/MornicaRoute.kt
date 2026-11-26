@@ -15,6 +15,7 @@ sealed interface MornicaRoute {
   data object Search : MornicaRoute
   data object Downloads : MornicaRoute
   data object Settings : MornicaRoute
+  data object Playlists : MornicaRoute
   data class PlaylistDetail(val name: String) : MornicaRoute
 }
 

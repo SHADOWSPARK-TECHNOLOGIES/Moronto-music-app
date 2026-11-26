@@ -95,7 +95,14 @@ fun SearchScreen(
       horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
       artistChips.forEach { artist ->
-        GenreChip(label = artist, selected = text.equals(artist, ignoreCase = true), onClick = { text = artist })
+        GenreChip(
+          label = artist,
+          selected = text.equals(artist, ignoreCase = true),
+          onClick = {
+            text = artist
+            router.updateLocalSearchQuery(artist)
+          },
+        )
       }
     }
 

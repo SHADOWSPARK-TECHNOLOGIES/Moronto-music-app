@@ -13,6 +13,7 @@ import org.json.JSONObject
  */
 interface PlaylistStore {
   fun names(): List<String>
+  fun create(name: String): Boolean
   fun tracks(playlistName: String): List<String>
   fun add(playlistName: String, trackId: String): Boolean
   fun removeTrack(playlistName: String, trackId: String): Boolean
@@ -25,6 +26,13 @@ class InMemoryPlaylistStore : PlaylistStore {
   private val playlists = LinkedHashMap<String, MutableList<String>>()
 
   override fun names(): List<String> = playlists.keys.toList()
+
+  override fun create(name: String): Boolean {
+    val trimmed = name.trim()
+    if (trimmed.isBlank() || playlists.containsKey(trimmed)) return false
+    playlists[trimmed] = mutableListOf()
+    return true
+  }
 
   override fun tracks(playlistName: String): List<String> =
     playlists[playlistName].orEmpty().toList()
@@ -45,9 +53,10 @@ class InMemoryPlaylistStore : PlaylistStore {
   }
 
   override fun rename(oldName: String, newName: String): Boolean {
-    if (oldName == newName || newName.isBlank()) return false
+    val trimmed = newName.trim()
+    if (oldName == newName || trimmed.isBlank() || playlists.containsKey(trimmed)) return false
     val list = playlists.remove(oldName) ?: return false
-    playlists[newName] = list
+    playlists[trimmed] = list
     return true
   }
 
@@ -72,6 +81,8 @@ class SharedPrefsPlaylistStore(context: Context) : PlaylistStore {
   }
 
   override fun names(): List<String> = memory.names()
+
+  override fun create(name: String): Boolean = memory.create(name).also { if (it) persist() }
 
   override fun tracks(playlistName: String): List<String> = memory.tracks(playlistName)
 
@@ -98,6 +109,9 @@ class SharedPrefsPlaylistStore(context: Context) : PlaylistStore {
       for (i in 0 until list.length()) {
         val entry = list.getJSONObject(i)
         val name = entry.getString(KEY_NAME)
+        // Recreate the playlist itself, including empty ones, before restoring track IDs.
+        // Without this, a playlist with zero tracks silently disappears on relaunch.
+        if (!memory.create(name)) continue
         val ids = entry.getJSONArray(KEY_TRACK_IDS)
         for (j in 0 until ids.length()) {
           memory.add(name, ids.getString(j))

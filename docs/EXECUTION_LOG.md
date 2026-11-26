@@ -357,3 +357,42 @@ files + ledger doc. Toolchain freeze unchanged. No secrets/credentials were invo
 - Build: BUILD SUCCESSFUL (:app:assembleDebug) -> app/build/outputs/apk/debug/app-debug.apk (20.5 MB)
 - Router Call Signature Audit: 54 declared methods, 0 unknown methods, 0 arg-count mismatches
 - Status: VERIFIED
+
+## [2026-11-26] Phase C2: Playlist CRUD — reconciled from patches, unit-verified / build-verified
+- Reconciled `patches/phase-c2/0001-feat-playlist-CRUD-create-rename-delete-add-current-.patch`
+  (applied cleanly with `git apply`); its documentation companion patch 0002 did not apply cleanly,
+  so this entry records the verified state instead.
+- Added: `PlaylistStore.create`, `PlaylistListScreen`, `MornicaRoute.Playlists` + overflow entry,
+  playlist detail rename/delete/add-current-track, and two new unit tests.
+- Fixed: `SharedPrefsPlaylistStore.load()` now recreates zero-track playlists on relaunch
+  (previously empty playlists silently vanished).
+- Command: `./gradlew --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug`
+- Unit: 90/90 passed, 0 failures, 0 errors, 0 skipped (was 88/88 before Phase C2).
+- Lint: 0 errors, 35 warnings. Build: BUILD SUCCESSFUL; debug APK 20,634,243 bytes.
+- Device-verified: NOT performed this session (no emulator/instrumented run). Enhanced now-playing
+  sheet and SleepTimerController remain unreferenced behind the existing device-proof gate.
+- Unverified: physical-device playlist persistence and enhanced-player UX. No push/merge signing or
+  release action performed.
+
+## [2026-11-26] Review-driven fixes — unit-verified / build-verified
+Applied after a static review of Phases A–C. Guardrails re-checked: no new dependencies, no YouTube /
+googlevideo URIs added, no fabricated rights, all playback still routes through the rights-gated router.
+- `PlaylistDetailScreen`: rows now follow store order and move/reorder uses the store index, so the
+  correct track moves; "Play" is honestly labelled as playing the first track.
+- `PlaylistStore.rename`: refuses to overwrite an existing destination (no more silent track loss);
+  new regression test added → 91/91 unit tests.
+- `SharedPrefsPlaylistStore.load`: recreates empty playlists on relaunch (fix from previous entry).
+- Overlay screens now render on an opaque `Surface`, so the previous tab never shows through;
+  bottom-tab and header navigation now close any open overlay first.
+- `OnDeviceRecommender` exposes `historyVersion` StateFlow; home shelves now refresh after a play.
+- `SearchScreen` artist chips now mirror the query into the router like the text field does.
+- `SleepTimerController` exposes observable state and is wired to the "Playback Timer & Controls"
+  menu via a 15/30/45/60-minute dialog; firing asks the existing router to pause (no second player).
+- Command: `./gradlew --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug`
+- Result: BUILD SUCCESSFUL; 91/91 tests, 0 failures, 0 errors; lint 0 errors / 35 warnings;
+  debug APK 20,640,023 bytes.
+- Known limitations (NOT fixed, no silent scope creep): `removeFromQueue` is a display-state helper
+  that the next `playLocalTrack` rebuilds; onMediaTrackTransitioned/catalog plays do not yet feed
+  recommendation history; a playlist's Play action starts only its first track with the library-wide
+  queue. All three require router API changes and owner review; the enhanced now-playing sheet remains
+  unreferenced behind its device-proof gate. Device/emulator verification NOT performed.

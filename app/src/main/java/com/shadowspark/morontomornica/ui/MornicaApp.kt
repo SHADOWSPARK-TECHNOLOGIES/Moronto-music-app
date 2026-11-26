@@ -60,6 +60,7 @@ import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -117,11 +118,13 @@ import com.shadowspark.morontomornica.model.RepeatMode
 import com.shadowspark.morontomornica.model.TrackSortOption
 import com.shadowspark.morontomornica.model.YouTubeVideoCard
 import com.shadowspark.morontomornica.domain.MornicaRuntime
+import com.shadowspark.morontomornica.core.state.SleepTimerController
 import com.shadowspark.morontomornica.ui.home.HomeFeedScreen
 import com.shadowspark.morontomornica.ui.library.DownloadsScreen
 import com.shadowspark.morontomornica.ui.nav.MornicaNav
 import com.shadowspark.morontomornica.ui.nav.MornicaRoute
 import com.shadowspark.morontomornica.ui.playlist.PlaylistDetailScreen
+import com.shadowspark.morontomornica.ui.playlist.PlaylistListScreen
 import com.shadowspark.morontomornica.ui.search.SearchScreen
 import com.shadowspark.morontomornica.ui.settings.SettingsScreen
 
@@ -136,6 +139,16 @@ fun MornicaApp(
   // Phase B overlay navigation: Search / Downloads / Settings / Home feed render above the
   // active primary tab; the three PrimaryScreens and their accessibility enumeration are unchanged.
   val route by MornicaNav.route.collectAsState()
+
+  // Sleep timer is UI-side only: when it fires it asks the existing router to pause,
+  // so the real Media3 controller and its state stay authoritative.
+  var showSleepTimer by remember { mutableStateOf(false) }
+  val sleepTimer = remember {
+    SleepTimerController {
+      if (router.state.value.isLocalPlaying) router.toggleLocalPlayPause()
+    }
+  }
+  val sleepRemaining by sleepTimer.remainingMinutesFlow.collectAsState()
 
   // Back navigation: collapse an expanded Now Playing sheet first, then return to My Music
   // from the other primary screens. On the My Music home screen (sheet collapsed) Back is
@@ -160,15 +173,23 @@ fun MornicaApp(
       topBar = {
         MorontoTopHeader(
           uiState = uiState,
-          onAiDiscoveryClick = { router.selectScreen(PrimaryScreen.DISCOVER_WATCH) },
+          onAiDiscoveryClick = {
+            MornicaNav.close()
+            router.selectScreen(PrimaryScreen.DISCOVER_WATCH)
+          },
           onEqualizerClick = {
+            MornicaNav.close()
             if (uiState.activeLocalTrack != null) {
               router.setNowPlayingExpanded(true)
             } else {
               router.selectScreen(PrimaryScreen.MY_MUSIC)
             }
           },
-          onInfoClick = { router.selectScreen(PrimaryScreen.CREATOR_HUB) },
+          onInfoClick = {
+            MornicaNav.close()
+            router.selectScreen(PrimaryScreen.CREATOR_HUB)
+          },
+          onSleepTimerClick = { showSleepTimer = true },
         )
       },
       bottomBar = {
@@ -189,6 +210,7 @@ fun MornicaApp(
               NavigationBarItem(
                 selected = selected,
                 onClick = {
+                  MornicaNav.close()
                   router.setNowPlayingExpanded(false)
                   router.selectScreen(screen)
                 },
@@ -262,33 +284,69 @@ fun MornicaApp(
         }
 
         // Phase B overlay screens (full-screen above the active tab; Back closes the route first).
+        // Opaque background so the previous tab never shows through the overlay.
         route?.let { activeRoute ->
-          when (activeRoute) {
-            MornicaRoute.Search ->
-              SearchScreen(uiState = uiState, router = router, onBack = { MornicaNav.close() })
-            MornicaRoute.Downloads ->
-              DownloadsScreen(uiState = uiState, router = router, onBack = { MornicaNav.close() })
-            MornicaRoute.Settings ->
-              SettingsScreen(uiState = uiState, router = router, onBack = { MornicaNav.close() })
-            MornicaRoute.HomeFeed ->
-              HomeFeedScreen(
-                uiState = uiState,
-                router = router,
-                recommender = MornicaRuntime.recommender,
-                onOpenSearch = { MornicaNav.open(MornicaRoute.Search) },
-                onOpenDownloads = { MornicaNav.open(MornicaRoute.Downloads) },
-              )
-            is MornicaRoute.PlaylistDetail ->
-              PlaylistDetailScreen(
-                name = activeRoute.name,
-                store = MornicaRuntime.playlistStore,
-                uiState = uiState,
-                router = router,
-                onBack = { MornicaNav.close() },
-              )
+          Surface(color = MornicaMidnightBg, modifier = Modifier.fillMaxSize()) {
+            when (activeRoute) {
+              MornicaRoute.Search ->
+                SearchScreen(uiState = uiState, router = router, onBack = { MornicaNav.close() })
+              MornicaRoute.Downloads ->
+                DownloadsScreen(uiState = uiState, router = router, onBack = { MornicaNav.close() })
+              MornicaRoute.Settings ->
+                SettingsScreen(uiState = uiState, router = router, onBack = { MornicaNav.close() })
+              MornicaRoute.HomeFeed ->
+                HomeFeedScreen(
+                  uiState = uiState,
+                  router = router,
+                  recommender = MornicaRuntime.recommender,
+                  onOpenSearch = { MornicaNav.open(MornicaRoute.Search) },
+                  onOpenDownloads = { MornicaNav.open(MornicaRoute.Downloads) },
+                )
+              MornicaRoute.Playlists ->
+                PlaylistListScreen(
+                  store = MornicaRuntime.playlistStore,
+                  onOpenPlaylist = { MornicaNav.open(MornicaRoute.PlaylistDetail(it)) },
+                  onBack = { MornicaNav.close() },
+                )
+              is MornicaRoute.PlaylistDetail ->
+                PlaylistDetailScreen(
+                  name = activeRoute.name,
+                  store = MornicaRuntime.playlistStore,
+                  uiState = uiState,
+                  router = router,
+                  onBack = { MornicaNav.close() },
+                )
+            }
           }
         }
       }
+    }
+
+    if (showSleepTimer) {
+      AlertDialog(
+        onDismissRequest = { showSleepTimer = false },
+        title = { Text("Sleep timer") },
+        text = {
+          Column {
+            Text(
+              if (sleepRemaining > 0) "Playback will pause in $sleepRemaining minutes."
+              else "Choose when playback should pause. The timer never changes audio focus or starts a second player."
+            )
+            listOf(15, 30, 45, 60).forEach { minutes ->
+              TextButton(
+                onClick = {
+                  sleepTimer.start(minutes)
+                  showSleepTimer = false
+                },
+              ) { Text("$minutes minutes") }
+            }
+            if (sleepRemaining > 0) {
+              TextButton(onClick = { sleepTimer.cancel() }) { Text("Cancel timer") }
+            }
+          }
+        },
+        confirmButton = { TextButton(onClick = { showSleepTimer = false }) { Text("Done") } },
+      )
     }
   }
 }
@@ -299,6 +357,7 @@ private fun MorontoTopHeader(
   onAiDiscoveryClick: () -> Unit,
   onEqualizerClick: () -> Unit,
   onInfoClick: () -> Unit,
+  onSleepTimerClick: () -> Unit,
 ) {
   var overflowExpanded by remember { mutableStateOf(false) }
 
@@ -381,7 +440,7 @@ private fun MorontoTopHeader(
               text = { Text("Playback Timer & Controls") },
               onClick = {
                 overflowExpanded = false
-                onEqualizerClick()
+                onSleepTimerClick()
               },
               leadingIcon = {
                 Icon(Icons.Default.Timer, contentDescription = null)
@@ -445,6 +504,16 @@ private fun MorontoTopHeader(
               },
               leadingIcon = {
                 Icon(Icons.Default.Info, contentDescription = null)
+              },
+            )
+            DropdownMenuItem(
+              text = { Text("Playlists") },
+              onClick = {
+                overflowExpanded = false
+                MornicaNav.open(MornicaRoute.Playlists)
+              },
+              leadingIcon = {
+                Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null)
               },
             )
           }
