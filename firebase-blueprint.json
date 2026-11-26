@@ -1,0 +1,146 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated Moronto Music listener profile and synced studio preferences.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the authenticated user.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Listener display name.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified account email address.",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "providerId": {
+          "type": "string",
+          "enum": ["google.com", "password", "other"],
+          "description": "Authentication provider identifier."
+        },
+        "language": {
+          "type": "string",
+          "enum": ["en", "pcm", "yo", "ig", "ha"],
+          "description": "Preferred UI language code."
+        },
+        "themeId": {
+          "type": "string",
+          "enum": ["emerald-console", "sunset-brass", "lagos-indigo", "obsidian-rose"],
+          "description": "Selected Moronto Studio color theme."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "uid",
+        "displayName",
+        "email",
+        "providerId",
+        "language",
+        "themeId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SupportRequest": {
+      "title": "SupportRequest",
+      "description": "Offline music transfer and device import assistance request submitted by an authenticated listener.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner UID matching Firebase Auth UID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userEmail": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified listener contact email.",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Listener name.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "deviceType": {
+          "type": "string",
+          "enum": ["android", "iphone", "windows-mac", "other"],
+          "description": "Listener device category."
+        },
+        "topic": {
+          "type": "string",
+          "description": "Short summary of the music-file assistance request.",
+          "minLength": 3,
+          "maxLength": 120
+        },
+        "message": {
+          "type": "string",
+          "description": "Detailed description of how Moronto Support can assist with getting or importing local audio files.",
+          "minLength": 10,
+          "maxLength": 1000
+        },
+        "status": {
+          "type": "string",
+          "enum": ["open", "resolved"],
+          "description": "Ticket lifecycle status."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "userId",
+        "userEmail",
+        "displayName",
+        "deviceType",
+        "topic",
+        "message",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/private/profile": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Strictly isolated private listener profile and studio theme/language preferences."
+    },
+    "/support_requests/{requestId}": {
+      "schema": { "$ref": "#/entities/SupportRequest" },
+      "description": "Support tickets for offline music file assistance scoped strictly per owner userId."
+    }
+  }
+}

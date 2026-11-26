@@ -10,7 +10,10 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@firebase/eslint-plugin-security-rules": "^0.0.2",
+    "eslint": "^10.15.0",
     "express": "^5.1.0",
+    "firebase": "^13.4.0",
     "lucide-react": "^0.511.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

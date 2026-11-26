@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.Mornica" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#071321</item>
+        <item name="android:navigationBarColor">#071321</item>
+        <item name="android:windowBackground">#071321</item>
+    </style>
+</resources>

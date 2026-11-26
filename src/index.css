@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
-:root {
+:root,
+[data-theme="emerald-console"] {
   --mornica-midnight-bg: #071321;
   --mornica-slate-header: #0b1727;
   --mornica-slate-card: #14243a;
@@ -16,11 +17,51 @@
   --mornica-text-muted: #a5b6ca;
 }
 
+[data-theme="sunset-brass"] {
+  --mornica-midnight-bg: #130e0b;
+  --mornica-slate-header: #1c1410;
+  --mornica-slate-card: #271c16;
+  --mornica-slate-card-elevated: #33241c;
+  --mornica-slate-border: #463227;
+  --mornica-emerald: #ffbe55;
+  --mornica-emerald-dark: #33220a;
+  --mornica-cyan: #fb923c;
+  --mornica-amber-start: #ffd080;
+  --mornica-amber-end: #d97706;
+}
+
+[data-theme="lagos-indigo"] {
+  --mornica-midnight-bg: #090c1e;
+  --mornica-slate-header: #101430;
+  --mornica-slate-card: #171d42;
+  --mornica-slate-card-elevated: #212958;
+  --mornica-slate-border: #2f3a75;
+  --mornica-emerald: #38bdf8;
+  --mornica-emerald-dark: #0c2640;
+  --mornica-cyan: #a78bfa;
+  --mornica-amber-start: #fbbf24;
+  --mornica-amber-end: #f59e0b;
+}
+
+[data-theme="obsidian-rose"] {
+  --mornica-midnight-bg: #120b11;
+  --mornica-slate-header: #1b111a;
+  --mornica-slate-card: #271825;
+  --mornica-slate-card-elevated: #342131;
+  --mornica-slate-border: #472e43;
+  --mornica-emerald: #fb7185;
+  --mornica-emerald-dark: #3a1220;
+  --mornica-cyan: #f472b6;
+  --mornica-amber-start: #fdba74;
+  --mornica-amber-end: #e11d48;
+}
+
 body {
   font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--mornica-midnight-bg);
   color: var(--mornica-text-light);
   margin: 0;
+  transition: background-color 220ms ease;
 }
 
 .font-tabular {
@@ -28,10 +69,10 @@ body {
 }
 
 .mornica-amber-gradient {
-  background: linear-gradient(90deg, #ffbe55 0%, #ea580c 100%);
+  background: linear-gradient(90deg, var(--mornica-amber-start) 0%, var(--mornica-amber-end) 100%);
 }
 
-/* Custom range slider styling matching Mornica Seek Bar */
+/* Custom range slider styling matching Moronto Music Seek Bar */
 input[type="range"].mornica-slider {
   -webkit-appearance: none;
   appearance: none;
@@ -47,8 +88,8 @@ input[type="range"].mornica-slider::-webkit-slider-thumb {
   width: 16px;
   height: 16px;
   border-radius: 9999px;
-  background: #ffbe55;
-  border: 2px solid #071321;
+  background: var(--mornica-amber-start);
+  border: 2px solid var(--mornica-midnight-bg);
   box-shadow: 0 0 0 2px rgba(255, 190, 85, 0.25);
   transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -61,7 +102,7 @@ input[type="range"].mornica-slider::-moz-range-thumb {
   width: 16px;
   height: 16px;
   border-radius: 9999px;
-  background: #ffbe55;
-  border: 2px solid #071321;
+  background: var(--mornica-amber-start);
+  border: 2px solid var(--mornica-midnight-bg);
   cursor: pointer;
 }
